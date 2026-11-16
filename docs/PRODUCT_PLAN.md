@@ -13,11 +13,17 @@ Status: planning draft, 2026-11-16
 - “All formats” is not a support promise. Publish a tested container/codec matrix and the codec engine's license notices.
 - Use official service players/APIs for hosted video. If a service does not permit third-party playback, open its official player or report unsupported.
 - Download is available only when the service/API and content owner explicitly authorize it. DRM and access-control bypass are excluded.
-- Naver MYBOX and Naver DRM remain feasibility questions pending current official documentation or partner confirmation.
+- Naver MYBOX file-list API and Naver DRM playback remain unverified pending official documentation or partner confirmation.
 
 ## Cloud media sources
 
-Candidate providers: Google Drive, OneDrive, Dropbox, and Naver MYBOX. A provider adapter handles official OAuth, directory listing, metadata, token renewal, range/seek behavior, and authorized media reads. Credentials stay in platform secure storage. No provider is promised until its official API and playback permission have been verified.
+Candidate providers: Google Drive, OneDrive, Dropbox, Naver MYBOX, and PikPak. Google Drive, OneDrive, Dropbox, and MYBOX still need official API/permission verification before support is promised.
+
+PikPak documents WebDAV for Premium accounts: the user enables it and creates a separate WebDAV credential, then the player uses its existing WebDAV adapter for folder listing and authorized reads. The PikPak FAQ says Connected Apps quotas apply and streaming can slow when quota limits are reached. PoC must verify PROPFIND listing, authentication, Range/seek, and quota behavior. Store user-created credentials in platform secure storage and explain the granted permission. Prefer documented WebDAV over undocumented native APIs.
+
+A provider adapter handles OAuth or documented protocols, directory listing, metadata, token/credential renewal, range/seek behavior, and authorized media reads. No provider is promised until its official access and playback permission have been verified.
+
+References: [PikPak FAQ](https://mypikpak.com/en-US/faq), [Naver Open API list](https://developers.naver.com/docs/common/openapiguide/apilist.md), [Naver open-source compliance](https://developers.naver.com/notice/compliance/). The Naver API catalog reviewed here does not list MYBOX file access; this does not rule out a separately negotiated partner API. The Naver compliance page documents FFmpeg/open-source components, not a third-party DRM authorization route.
 
 The public edition can expose a provider interface and include only providers selected for Community. Additional or commercial integrations can be distributed separately, subject to each provider's terms.
 
