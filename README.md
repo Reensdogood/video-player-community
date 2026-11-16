@@ -2,6 +2,8 @@
 
 Windows-first video player project. The first delivery target is a Windows proof of concept; Android and iOS are later product targets.
 
+Repository: https://github.com/Reensdogood/video-player-community
+
 ## Community scope
 
 - Local media playback and playlists
