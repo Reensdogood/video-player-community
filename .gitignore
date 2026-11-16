@@ -1,0 +1,21 @@
+# Build output
+bin/
+obj/
+dist/
+publish/
+
+# Local settings and secrets
+.env
+.env.*
+!.env.example
+*.user
+*.suo
+secrets/
+credentials.json
+token.json
+
+# IDE / OS
+.vs/
+.idea/
+.DS_Store
+Thumbs.db
