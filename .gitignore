@@ -3,6 +3,7 @@ bin/
 obj/
 dist/
 publish/
+artifacts/
 
 # Local settings and secrets
 .env

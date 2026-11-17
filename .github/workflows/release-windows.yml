@@ -1,0 +1,37 @@
+name: Windows release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install FFmpeg for packaging
+        shell: pwsh
+        run: choco install ffmpeg --no-progress --yes
+      - name: Build the offline caption engine and model
+        shell: pwsh
+        run: .\scripts\Build-CaptionRuntime.ps1
+      - name: Build installer and update packages
+        shell: pwsh
+        run: .\scripts\Build-WindowsInstaller.ps1 -Version $env:GITHUB_REF_NAME.Substring(1)
+      - name: Publish release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          gh release create $env:GITHUB_REF_NAME (Get-ChildItem "artifacts/windows-installer/$version" -File | ForEach-Object FullName) --title "ohmyplayer $version" --generate-notes --verify-tag

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Gemini API 연결 준비 가이드 · 다봐</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #173047;
+      --muted: #526b80;
+      --accent: #167f7b;
+      --accent-dark: #0f6f6c;
+      --line: #bed0de;
+      --glass: rgba(255,255,255,.76);
+      --glass-strong: rgba(255,255,255,.94);
+      --surface: #f7fafd;
+      --notice: #fff2d7;
+      --notice-ink: #74500d;
+      --shadow: 0 18px 48px rgba(39,73,97,.12);
+      font-family: "Segoe UI Variable", "Malgun Gothic", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--ink);
+      background: radial-gradient(ellipse at 12% 4%, #f9fdff 0, transparent 46%),
+                  linear-gradient(135deg, #eaf2f8 0%, #dce8f1 55%, #e7eef6 100%);
+    }
+    a { color: #126b78; text-underline-offset: 3px; }
+    a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid #46aaa5; outline-offset: 3px; }
+    .shell { width: min(1040px, calc(100% - 36px)); margin: 0 auto; padding: 36px 0 56px; }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .brand { display: flex; gap: 12px; align-items: center; font-weight: 700; }
+    .brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: var(--glass-strong); border: 1px solid var(--line); box-shadow: 0 5px 16px #17304718; color: var(--accent); }
+    .brand small { display: block; margin-top: 2px; color: var(--muted); font-weight: 500; }
+    .review-date { color: var(--muted); font-size: 13px; }
+    header { max-width: 740px; margin: 20px 0 26px; }
+    h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.12; letter-spacing: -.035em; margin: 0; }
+    header p { color: var(--muted); font-size: 17px; line-height: 1.65; margin: 14px 0 0; }
+    .notice { display: grid; grid-template-columns: 28px 1fr; gap: 12px; background: var(--notice); color: var(--notice-ink); border: 1px solid #e4cf9e; border-radius: 15px; padding: 16px 18px; margin-bottom: 22px; line-height: 1.55; }
+    .notice strong { display: block; margin-bottom: 3px; }
+    .layout { display: grid; grid-template-columns: 250px minmax(0,1fr); gap: 20px; align-items: start; }
+    .rail, .panel { background: var(--glass); border: 1px solid #b5c9d8; border-radius: 19px; box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .rail { padding: 13px; position: sticky; top: 18px; }
+    .progress-copy { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; padding: 3px 6px 9px; }
+    .progress { height: 6px; background: #d6e3ec; border-radius: 99px; overflow: hidden; margin: 0 6px 12px; }
+    .progress span { display: block; height: 100%; width: 16.66%; background: var(--accent); border-radius: inherit; transition: width .2s ease; }
+    .step-nav { display: grid; gap: 5px; }
+    .step-link { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 8px; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; color: var(--muted); border-radius: 12px; padding: 9px; cursor: pointer; font: inherit; }
+    .step-link:hover { background: #ffffff8c; }
+    .step-link[aria-current="step"] { color: var(--ink); border-color: var(--line); background: var(--glass-strong); box-shadow: 0 3px 10px #1730470b; }
+    .step-number { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #aabfce; border-radius: 50%; font-size: 12px; font-weight: 700; background: #f4f8fb; }
+    .step-link.done .step-number { background: var(--accent); border-color: var(--accent); color: white; }
+    .step-link span:last-child { font-size: 13px; font-weight: 600; }
+    .panel { padding: clamp(20px, 4vw, 34px); min-height: 510px; background: var(--glass-strong); }
+    .eyebrow { color: var(--accent-dark); text-transform: uppercase; font-size: 12px; font-weight: 750; letter-spacing: .08em; }
+    h2 { font-size: clamp(24px, 3vw, 31px); letter-spacing: -.02em; margin: 8px 0 10px; }
+    .lead { color: var(--muted); line-height: 1.65; margin: 0 0 23px; }
+    .instruction { border-top: 1px solid #d6e2eb; padding: 19px 0; line-height: 1.65; }
+    .instruction:first-of-type { border-top: 0; padding-top: 0; }
+    .instruction h3 { font-size: 16px; margin: 0 0 6px; }
+    .instruction p { margin: 0; color: var(--muted); }
+    .instruction ul { padding-left: 21px; margin: 10px 0 0; color: var(--muted); }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 13px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; border-radius: 10px; border: 1px solid var(--line); padding: 9px 14px; font: inherit; font-size: 14px; font-weight: 650; text-decoration: none; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+    .button:hover { transform: translateY(-1px); }
+    .button.primary { color: white; background: var(--accent); border-color: var(--accent); }
+    .button.primary:hover { background: var(--accent-dark); }
+    .button.secondary { background: #f5f9fc; color: var(--ink); }
+    .button.text { border-color: transparent; background: transparent; color: var(--muted); }
+    .callout { border: 1px solid var(--line); background: #f1f7fa; border-radius: 13px; padding: 13px 15px; margin: 13px 0; line-height: 1.55; color: var(--muted); }
+    .callout strong { color: var(--ink); }
+    .checkline { display: flex; gap: 10px; align-items: flex-start; margin: 15px 0 0; color: var(--ink); line-height: 1.5; }
+    .checkline input { width: 18px; height: 18px; accent-color: var(--accent); margin-top: 2px; flex: 0 0 auto; }
+    .step-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid #d6e2eb; margin-top: 25px; padding-top: 18px; }
+    .completion { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+    .completion input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .step-panel[hidden] { display: none; }
+    .footer-note { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 21px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 24px, 650px); padding-top: 20px; }
+      .layout { grid-template-columns: 1fr; }
+      .rail { position: static; padding: 10px; }
+      .step-nav { display: flex; overflow-x: auto; padding-bottom: 2px; }
+      .step-link { min-width: 142px; }
+      .step-link span:last-child { white-space: normal; }
+      .progress-copy { padding-top: 0; }
+      .panel { min-height: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topline">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">✦</span><span>다봐 <small>ohmyplayer · AI 연결 가이드</small></span></div>
+      <div class="review-date">공식 안내 확인 · 2026. 11. 16.</div>
+    </div>
+    <header>
+      <h1>Gemini API 키 발급 안내</h1>
+      <p>Google 계정으로 AI Studio에 로그인하고, Gemini API 요청에 사용할 키를 발급하는 과정을 단계별로 안내합니다.</p>
+    </header>
+    <aside class="notice" aria-label="중요 안내">
+      <span aria-hidden="true">ⓘ</span><div><strong>이 안내는 키 발급까지 도와줍니다.</strong> 현재 ohmyplayer PoC에는 Gemini API 키를 등록하거나 번역에 사용하는 기능이 아직 없습니다. 키를 앱이나 이 페이지에 붙여 넣지 마세요. 이 페이지는 진행 체크만 저장하며 키와 계정 정보를 저장하지 않습니다.</div>
+    </aside>
+    <div class="layout">
+      <nav class="rail" aria-label="안내 단계">
+        <div class="progress-copy"><span>진행 상황</span><span id="progressLabel">1 / 6</span></div>
+        <div class="progress" role="progressbar" aria-label="가이드 진행률" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1"><span id="progressBar"></span></div>
+        <div class="step-nav" id="stepNav">
+          <button class="step-link" type="button" data-step="0" aria-current="step"><span class="step-number">1</span><span>시작 전 확인</span></button>
+          <button class="step-link" type="button" data-step="1"><span class="step-number">2</span><span>Google 계정 로그인</span></button>
+          <button class="step-link" type="button" data-step="2"><span class="step-number">3</span><span>프로젝트 선택</span></button>
+          <button class="step-link" type="button" data-step="3"><span class="step-number">4</span><span>API 키 만들기</span></button>
+          <button class="step-link" type="button" data-step="4"><span class="step-number">5</span><span>키 보관과 요금 확인</span></button>
+          <button class="step-link" type="button" data-step="5"><span class="step-number">6</span><span>발급 완료</span></button>
+        </div>
+      </nav>
+      <section class="panel" aria-live="polite" aria-atomic="true">
+        <div class="step-panel" data-panel="0">
+          <div class="eyebrow">준비 · 1단계</div><h2 tabindex="-1">계정과 프로젝트를 준비하세요</h2>
+          <p class="lead">Gemini API 키는 Google 계정의 AI Studio와 Google Cloud 프로젝트에 연결됩니다. 조직 계정이면 프로젝트 권한과 관리 정책을 먼저 확인하세요.</p>
+          <div class="instruction"><h3>시작하기 전에</h3><ul><li>사용할 Google 계정으로 로그인할 수 있는지 확인합니다.</li><li>기존 Cloud 프로젝트가 있으면 어느 프로젝트에서 사용량과 권한을 관리할지 정합니다.</li><li>Google Cloud 프로젝트마다 사용량과 결제 설정이 달라질 수 있으므로 개인용/조직용 프로젝트를 구분합니다.</li></ul></div>
+          <div class="callout"><strong>API 키는 비밀번호처럼 취급하세요.</strong> 다른 사람에게 보내거나 Git 저장소, 공개 문서, 스크린샷에 넣지 마세요.</div>
+          <div class="actions"><a class="button primary" href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio 열기 ↗</a><a class="button secondary" href="https://ai.google.dev/gemini-api/docs/get-started" target="_blank" rel="noopener noreferrer">공식 시작 안내 ↗</a></div>
+          <div class="step-footer"><span></span><label class="completion"><input type="checkbox" data-complete="0"> 확인했어요</label><button class="button primary next" type="button">다음 단계 →</button></div>
+        </div>
+        <div class="step-panel" data-panel="1" hidden>
+          <div class="eyebrow">로그인 · 2단계</div><h2 tabindex="-1">Google 계정으로 AI Studio에 로그인</h2>
+          <p class="lead">공식 AI Studio 페이지를 새 탭에서 열어 로그인하고 서비스 약관을 확인합니다.</p>
+          <div class="instruction"><h3>진행할 일</h3><p>페이지에서 사용할 Google 계정을 선택하고 안내되는 약관 확인을 마칩니다. ohmyplayer 계정이나 개발자용 OAuth Client ID를 만들 필요는 없습니다. 이 가이드는 Gemini API 키 발급을 안내합니다.</p><div class="actions"><a class="button primary" href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">AI Studio 로그인 ↗</a></div></div>
+          <div class="callout"><strong>인증 범위:</strong> 여기서 로그인하는 것은 Google AI Studio 계정입니다. 이는 ohmyplayer에 Google Drive 같은 클라우드 파일 권한을 주는 것과는 별개입니다.</div>
+          <div class="step-footer"><button class="button secondary prev" type="button">← 이전</button><label class="completion"><input type="checkbox" data-complete="1"> 로그인했어요</label><button class="button primary next" type="button">다음 단계 →</button></div>
+        </div>
+        <div class="step-panel" data-panel="2" hidden>
+          <div class="eyebrow">프로젝트 · 3단계</div><h2 tabindex="-1">API 키를 연결할 프로젝트 선택</h2>
+          <p class="lead">모든 Gemini API 키는 Google Cloud 프로젝트에 연결됩니다. 프로젝트가 사용량·권한·결제 설정을 관리합니다.</p>
+          <div class="instruction"><h3>새 계정이라면</h3><p>AI Studio가 기본 프로젝트를 준비할 수 있습니다. 프로젝트 이름을 확인하고 개인용 또는 조직용으로 알맞은지 살펴보세요.</p></div>
+          <div class="instruction"><h3>기존 프로젝트를 쓰려면</h3><p>AI Studio의 왼쪽 메뉴에서 <strong>Dashboard → Projects → Import projects</strong>를 선택해 프로젝트를 가져온 다음, 해당 프로젝트를 키 발급에 사용합니다.</p><div class="actions"><a class="button secondary" href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">AI Studio 프로젝트 메뉴 열기 ↗</a></div></div>
+          <div class="callout"><strong>키 생성 권한이 없다는 메시지가 나오면</strong> 프로젝트 관리자에게 IAM 권한을 확인해 달라고 요청하세요. 조직 정책이 있는 프로젝트는 관리자의 승인이 필요할 수 있습니다.</div>
+          <div class="step-footer"><button class="button secondary prev" type="button">← 이전</button><label class="completion"><input type="checkbox" data-complete="2"> 프로젝트를 골랐어요</label><button class="button primary next" type="button">다음 단계 →</button></div>
+        </div>
+        <div class="step-panel" data-panel="3" hidden>
+          <div class="eyebrow">발급 · 4단계</div><h2 tabindex="-1">Gemini API 키 만들기</h2>
+          <p class="lead">AI Studio의 키 페이지에서 프로젝트를 선택하고 새 키를 발급합니다.</p>
+          <div class="instruction"><h3>순서</h3><ol><li>API Keys 페이지를 엽니다.</li><li><strong>Create API key</strong>를 선택합니다.</li><li>앞 단계에서 선택한 Google Cloud 프로젝트를 지정합니다.</li><li>생성이 끝나면 키가 표시되는 동안 안전한 비밀번호 관리 도구에 저장합니다.</li></ol><div class="actions"><a class="button primary" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">API Keys 페이지 열기 ↗</a><a class="button secondary" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noopener noreferrer">키 보안 공식 안내 ↗</a></div></div>
+          <div class="callout"><strong>2026년 5월 28일부터</strong> AI Studio에서 새로 만든 키는 기본적으로 Gemini API 전용 authorization key입니다. 이전 standard key를 쓰고 있다면 공식 안내에서 제한/전환 방법을 확인하세요. 현재 생성 화면이 문서와 다르면 AI Studio의 안내를 우선하세요.</div>
+          <div class="step-footer"><button class="button secondary prev" type="button">← 이전</button><label class="completion"><input type="checkbox" data-complete="3"> 키를 발급했어요</label><button class="button primary next" type="button">다음 단계 →</button></div>
+        </div>
+        <div class="step-panel" data-panel="4" hidden>
+          <div class="eyebrow">보관 · 5단계</div><h2 tabindex="-1">키를 안전하게 보관하고 사용량 확인</h2>
+          <p class="lead">이 단계에서는 발급한 키를 복사해 보내거나 가이드에 입력하지 않습니다. 키 발급 화면을 닫기 전에 안전한 보관 위치를 확인하세요.</p>
+          <div class="instruction"><h3>키 보안</h3><ul><li>키를 공개 저장소, 메신저, 이메일, 채팅에 붙여 넣지 않습니다.</li><li>화면을 공유하거나 스크린샷을 올릴 때 키가 보이지 않게 합니다.</li><li>의심스러운 노출이 있으면 AI Studio에서 해당 키를 폐기하고 새 키를 만듭니다.</li></ul></div>
+          <div class="instruction"><h3>사용량과 결제</h3><p>무료 사용 가능 여부와 한도는 프로젝트/계정 조건에 따라 다를 수 있습니다. 한도를 높이기 위해 결제를 설정하기 전에 Google의 현재 가격 및 한도를 확인하세요.</p><div class="actions"><a class="button secondary" href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener noreferrer">가격 확인 ↗</a><a class="button secondary" href="https://ai.google.dev/gemini-api/docs/rate-limits" target="_blank" rel="noopener noreferrer">요청 한도 확인 ↗</a><a class="button secondary" href="https://aistudio.google.com/usage" target="_blank" rel="noopener noreferrer">AI Studio 사용량 ↗</a></div></div>
+          <div class="callout"><strong>ohmyplayer 연결 상태:</strong> 이 PoC 빌드에는 Gemini 키 입력과 번역 기능이 아직 구현되지 않았습니다. 발급한 키는 현재 앱에서 사용할 수 없습니다. 이후 연결 UI가 준비되면 Windows 사용자 계정 보호 저장소에 보관하고, 사용량과 클라우드 전송 동의를 함께 보여줘야 합니다.</div>
+          <div class="step-footer"><button class="button secondary prev" type="button">← 이전</button><label class="completion"><input type="checkbox" data-complete="4"> 사용량/보안을 확인했어요</label><button class="button primary next" type="button">다음 단계 →</button></div>
+        </div>
+        <div class="step-panel" data-panel="5" hidden>
+          <div class="eyebrow">완료 · 6단계</div><h2 tabindex="-1">발급 준비를 마쳤습니다</h2>
+          <p class="lead">이 안내에서는 Google AI Studio 계정으로 Gemini API 키를 발급하는 과정과 확인할 항목을 살펴봤습니다.</p>
+          <div class="instruction"><h3>다바에서 실제 사용하려면</h3><p>현재 PoC는 Ollama 로컬 모델 목록만 확인하며 Gemini API는 호출하지 않습니다. 앱에서 키를 입력하고, DPAPI로 보호해 저장하며, 자막 번역 요청과 사용량 안내를 구현하는 개발 단계가 남아 있습니다.</p></div>
+          <div class="callout"><strong>이 안내 페이지가 저장하는 정보:</strong> 현재 단계와 체크 완료 여부만 이 브라우저의 로컬 저장소에 기록합니다. Google 계정·API 키는 요청하거나 저장하지 않습니다.</div>
+          <div class="actions"><a class="button secondary" href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">AI Studio 다시 열기 ↗</a><a class="button secondary" href="https://ai.google.dev/gemini-api/docs" target="_blank" rel="noopener noreferrer">Gemini API 공식 문서 ↗</a><button class="button text" id="resetGuide" type="button">진행 기록 초기화</button></div>
+          <div class="step-footer"><button class="button secondary prev" type="button">← 이전</button><label class="completion"><input type="checkbox" data-complete="5"> 안내를 마쳤어요</label><span></span></div>
+        </div>
+      </section>
+    </div>
+    <p class="footer-note">공식 문서: <a href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noopener noreferrer">Gemini API 키 관리</a> · <a href="https://ai.google.dev/gemini-api/docs/get-started" target="_blank" rel="noopener noreferrer">Gemini API 시작하기</a>. Google의 콘솔 화면과 요금 정책은 바뀔 수 있으니 발급/결제 전 공식 페이지의 최신 안내를 확인하세요.</p>
+    <div id="announce" class="sr-only" aria-live="polite"></div>
+  </main>
+  <script>
+    (() => {
+      const key = "ohmyplayer-gemini-guide-v1";
+      const panels = [...document.querySelectorAll("[data-panel]")];
+      const links = [...document.querySelectorAll(".step-link")];
+      const checks = [...document.querySelectorAll("[data-complete]")];
+      const bar = document.querySelector("#progressBar");
+      const progress = document.querySelector(".progress");
+      const label = document.querySelector("#progressLabel");
+      const announce = document.querySelector("#announce");
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem(key) || "{}"); } catch { saved = {}; }
+      let current = Math.min(5, Math.max(0, Number(saved.current) || 0));
+      checks.forEach(box => { box.checked = Boolean(saved.done?.[box.dataset.complete]); });
+      function save() {
+        const done = Object.fromEntries(checks.map(box => [box.dataset.complete, box.checked]));
+        try { localStorage.setItem(key, JSON.stringify({ current, done })); } catch { /* Progress can remain temporary if storage is disabled. */ }
+      }
+      function show(index, focusHeading = false) {
+        current = Math.min(5, Math.max(0, index));
+        panels.forEach((panel, i) => panel.hidden = i !== current);
+        links.forEach((button, i) => {
+          if (i === current) button.setAttribute("aria-current", "step"); else button.removeAttribute("aria-current");
+          button.classList.toggle("done", Boolean(saved.done?.[i]));
+        });
+        const percent = ((current + 1) / 6) * 100;
+        bar.style.width = `${percent}%`;
+        progress.setAttribute("aria-valuenow", String(current + 1));
+        label.textContent = `${current + 1} / 6`;
+        announce.textContent = `${current + 1}단계: ${links[current].innerText.trim()}`;
+        save();
+        if (focusHeading) panels[current].querySelector("h2")?.focus();
+      }
+      links.forEach(button => button.addEventListener("click", () => show(Number(button.dataset.step))));
+      document.querySelectorAll(".next").forEach(button => button.addEventListener("click", () => show(current + 1, true)));
+      document.querySelectorAll(".prev").forEach(button => button.addEventListener("click", () => show(current - 1, true)));
+      checks.forEach(box => box.addEventListener("change", () => {
+        const done = Object.fromEntries(checks.map(item => [item.dataset.complete, item.checked]));
+        saved.done = done;
+        links.forEach((link, i) => link.classList.toggle("done", Boolean(done[i])));
+        save();
+      }));
+      document.querySelector("#resetGuide").addEventListener("click", () => {
+        checks.forEach(box => box.checked = false);
+        saved = {};
+        try { localStorage.removeItem(key); } catch { /* Nothing to clear. */ }
+        show(0, true);
+      });
+      show(current);
+    })();
+  </script>
+</body>
+</html>

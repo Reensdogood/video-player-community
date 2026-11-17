@@ -1,0 +1,301 @@
+<Window x:Class="VideoPlayer.Wpf.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="설정 · 다봐 (ohmyplayer)" Height="760" Width="920" MinHeight="650" MinWidth="760"
+        WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="CanResize" Background="#E6EEF6" Foreground="#173047">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Ink" Color="#173047"/>
+        <SolidColorBrush x:Key="Muted" Color="#526B80"/>
+        <SolidColorBrush x:Key="Accent" Color="#167F7B"/>
+        <SolidColorBrush x:Key="AccentHover" Color="#0F6F6C"/>
+        <SolidColorBrush x:Key="Border" Color="#BED0DE"/>
+        <SolidColorBrush x:Key="Glass" Color="#DDFBFDFF"/>
+        <SolidColorBrush x:Key="GlassStrong" Color="#F4FFFFFF"/>
+        <SolidColorBrush x:Key="ControlSurface" Color="#F7FAFD"/>
+        <SolidColorBrush x:Key="WarningSurface" Color="#FFF2D7"/>
+        <SolidColorBrush x:Key="WarningInk" Color="#74500D"/>
+        <DropShadowEffect x:Key="SoftShadow" Color="#72899B" BlurRadius="18" ShadowDepth="3" Opacity="0.14"/>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Background" Value="{StaticResource GlassStrong}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="13,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonSurface" Property="Background" Value="#FFFFFFFF"/><Setter TargetName="ButtonSurface" Property="BorderBrush" Value="#86AFC2"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonSurface" Property="Background" Value="#DDEBF3"/></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ButtonSurface" Property="BorderBrush" Value="{StaticResource Accent}"/><Setter TargetName="ButtonSurface" Property="BorderThickness" Value="2"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55"/><Setter Property="Cursor" Value="Arrow"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+            <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource AccentHover}"/><Setter Property="BorderBrush" Value="{StaticResource AccentHover}"/></Trigger></Style.Triggers>
+        </Style>
+        <Style x:Key="QuietButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="10,6"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Background" Value="{StaticResource ControlSurface}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="CaretBrush" Value="{StaticResource Accent}"/>
+            <Setter Property="SelectionBrush" Value="#6686C8C4"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style TargetType="PasswordBox">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Background" Value="{StaticResource ControlSurface}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Background" Value="{StaticResource ControlSurface}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="MinHeight" Value="38"/>
+        </Style>
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Padding" Value="9,7"/>
+            <Style.Triggers>
+                <Trigger Property="IsHighlighted" Value="True"><Setter Property="Background" Value="#DCEEF2"/></Trigger>
+                <Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#CDE8E5"/></Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="15,10"/>
+            <Setter Property="Margin" Value="0,0,7,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabSurface" Background="#73FFFFFF" BorderBrush="#8FB3C6" BorderThickness="1" CornerRadius="10,10,0,0" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="{StaticResource GlassStrong}"/><Setter TargetName="TabSurface" Property="BorderBrush" Value="#9BBBCB"/><Setter Property="Foreground" Value="{StaticResource Accent}"/></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="#EFFFFFFF"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="#AFFFFFFF"/>
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6"/>
+        </Style>
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Padding" Value="8,7"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="ItemSurface" Background="Transparent" CornerRadius="7" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="#DDECF3"/></Trigger>
+                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="#CDE8E5"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#EAF2F8" Offset="0"/>
+                <GradientStop Color="#DCE8F1" Offset="0.55"/>
+                <GradientStop Color="#E7EEF6" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+        <Grid Margin="26">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,20" MouseLeftButtonDown="WindowTitleArea_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel><TextBlock Text="설정" FontSize="27" FontWeight="SemiBold"/><TextBlock Text="플레이어와 연결 서비스를 관리합니다." Foreground="{StaticResource Muted}" Margin="0,5,0,0" FontSize="13"/></StackPanel>
+                <Button Grid.Column="1" Content="—" Click="MinimizeWindow_Click" ToolTip="최소화" Padding="10,7" VerticalAlignment="Top"/>
+            </Grid>
+
+            <TabControl x:Name="SettingsTabs" Grid.Row="1">
+                <TabItem Header="재생·자막">
+                    <Border Background="{StaticResource Glass}" BorderBrush="#B5C9D8" BorderThickness="1" CornerRadius="0,13,13,13" Padding="22" Effect="{StaticResource SoftShadow}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+                            <TextBlock Text="재생 화면 설정" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="Ctrl+C로 저장하는 현재 프레임의 위치와 자막 가독성을 설정합니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,18"/>
+                            <TextBlock Text="화면 캡처 저장 위치" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,24"><Button DockPanel.Dock="Right" Content="폴더 선택" Click="CaptureFolder_Click" Style="{StaticResource PrimaryButton}" Margin="10,0,0,0"/><TextBox x:Name="CaptureFolderBox" IsReadOnly="True" VerticalContentAlignment="Center" ToolTip="비워 두면 Ctrl+C를 처음 누를 때 폴더를 선택합니다."/></DockPanel>
+                            <TextBlock Text="자막 모양" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="16">
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/><ColumnDefinition Width="115"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="글꼴" Style="{StaticResource FieldLabel}" Margin="0,0,10,12"/><ComboBox x:Name="SubtitleFontBox" Grid.Row="0" Grid.Column="1" SelectionChanged="PlayerPreference_Changed" Margin="0,0,14,12"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="크기" Style="{StaticResource FieldLabel}" Margin="0,0,10,12"/><ComboBox x:Name="SubtitleSizeBox" Grid.Row="0" Grid.Column="3" SelectionChanged="PlayerPreference_Changed" Margin="0,0,0,12"><ComboBoxItem Content="20" Tag="20"/><ComboBoxItem Content="24" Tag="24"/><ComboBoxItem Content="28" Tag="28"/><ComboBoxItem Content="32" Tag="32"/><ComboBoxItem Content="36" Tag="36"/><ComboBoxItem Content="42" Tag="42"/><ComboBoxItem Content="48" Tag="48"/></ComboBox>
+                                    <TextBlock Grid.Row="1" Text="외곽선" Style="{StaticResource FieldLabel}" Margin="0,0,10,0"/><ComboBox x:Name="SubtitleOutlineBox" Grid.Row="1" Grid.Column="1" SelectionChanged="PlayerPreference_Changed" Margin="0,0,14,0"><ComboBoxItem Content="없음"/><ComboBoxItem Content="표준"/><ComboBoxItem Content="두껍게"/></ComboBox><CheckBox x:Name="SubtitleBoldBox" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Content="굵게" VerticalAlignment="Center" Checked="SubtitleBold_Changed" Unchecked="SubtitleBold_Changed"/>
+                                </Grid>
+                            </Border>
+                            <TextBlock Text="글꼴과 크기는 다음 영상부터 적용됩니다. 화면 캡처는 PNG로 저장됩니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="2,12,0,0"/>
+                        </StackPanel></ScrollViewer>
+                    </Border>
+                </TabItem>
+                <TabItem Header="번역 모델">
+                    <Border Background="{StaticResource Glass}" BorderBrush="#B5C9D8" BorderThickness="1" CornerRadius="0,13,13,13" Padding="22" Effect="{StaticResource SoftShadow}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="로컬 모델" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="Ollama가 PC에서 실행 중이면 설치된 모델과 메타데이터를 확인합니다. 현재 PoC에서는 실제 번역이나 TTS 처리는 연결되지 않았습니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,18"/>
+                                <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,0,14">
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="270"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="서버 주소" Style="{StaticResource FieldLabel}" Margin="0,0,12,0"/>
+                                        <TextBox x:Name="OllamaUrlBox" Grid.Column="1" Text="http://localhost:11434"/>
+                                        <Button Grid.Column="2" Content="모델 새로고침" Style="{StaticResource PrimaryButton}" Click="RefreshModels_Click" Margin="10,0,0,0"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock x:Name="ModelStatus" Text="확인 전" Foreground="{StaticResource Muted}" Margin="2,0,0,8"/>
+                                <ListBox x:Name="ModelList" Height="190" SelectionChanged="ModelList_SelectionChanged"/>
+                                <TextBlock Text="선택 모델의 기능 및 제한" FontSize="15" FontWeight="SemiBold" Margin="0,20,0,9"/>
+                                <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="15">
+                                    <TextBlock x:Name="ModelDetails" Text="모델을 선택하면 API에서 확인 가능한 정보와 미검증 항목을 표시합니다." TextWrapping="Wrap" Foreground="{StaticResource Ink}"/>
+                                </Border>
+                                <TextBlock Text="번역 품질, 자막 인식(ASR), 음성 생성(TTS), GPU 요구사항은 모델마다 달라 별도 검증이 필요합니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </TabItem>
+
+                <TabItem Header="클라우드·서비스">
+                    <Border Background="{StaticResource Glass}" BorderBrush="#B5C9D8" BorderThickness="1" CornerRadius="0,13,13,13" Padding="22" Effect="{StaticResource SoftShadow}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="클라우드 연결" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="지금은 PC에 설치한 Google Drive, OneDrive, Dropbox 동기화 앱의 폴더를 선택해 파일 목록을 연결할 수 있습니다. 서비스 계정 로그인만으로 직접 목록을 읽는 기능은 ohmyplayer 제품용 연동 등록 후 제공하며, 사용자에게 개발자 ID를 요구하지 않습니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,18"/>
+
+                                <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,0,10">
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                        <StackPanel Grid.RowSpan="2" VerticalAlignment="Center"><TextBlock Text="Google Drive" FontSize="15" FontWeight="SemiBold"/><TextBlock x:Name="GoogleStatusText" Text="PC 동기화 폴더를 선택해 연결하세요" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,4,0,0"/></StackPanel>
+                                        <Button x:Name="GoogleConnectButton" Grid.Column="1" Content="동기화 폴더 선택" Click="GoogleConnect_Click" Style="{StaticResource PrimaryButton}" Margin="8,0"/>
+                                        <Button x:Name="GoogleDisconnectButton" Grid.Column="2" Content="연결 해제" Click="GoogleDisconnect_Click" Style="{StaticResource QuietButton}" Visibility="Collapsed"/>
+                                    </Grid>
+                                </Border>
+                                <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,0,10">
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center"><TextBlock Text="OneDrive" FontSize="15" FontWeight="SemiBold"/><TextBlock x:Name="OneDriveStatusText" Text="PC 동기화 폴더를 선택해 연결하세요" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,4,0,0"/></StackPanel>
+                                        <Button x:Name="OneDriveConnectButton" Grid.Column="1" Content="동기화 폴더 선택" Click="OneDriveConnect_Click" Style="{StaticResource PrimaryButton}" Margin="8,0"/>
+                                        <Button x:Name="OneDriveDisconnectButton" Grid.Column="2" Content="연결 해제" Click="OneDriveDisconnect_Click" Style="{StaticResource QuietButton}" Visibility="Collapsed"/>
+                                    </Grid>
+                                </Border>
+                                <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,0,14">
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center"><TextBlock Text="Dropbox" FontSize="15" FontWeight="SemiBold"/><TextBlock x:Name="DropboxStatusText" Text="PC 동기화 폴더를 선택해 연결하세요" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,4,0,0"/></StackPanel>
+                                        <Button x:Name="DropboxConnectButton" Grid.Column="1" Content="동기화 폴더 선택" Click="DropboxConnect_Click" Style="{StaticResource PrimaryButton}" Margin="8,0"/>
+                                        <Button x:Name="DropboxDisconnectButton" Grid.Column="2" Content="연결 해제" Click="DropboxDisconnect_Click" Style="{StaticResource QuietButton}" Visibility="Collapsed"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock x:Name="CloudAuthStatus" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="2,0,0,12"/>
+
+                                <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Naver MYBOX" FontSize="15" FontWeight="SemiBold"/><TextBlock x:Name="MyBoxStatusText" Grid.Column="1" Text="미연결" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/></Grid>
+                                        <TextBlock Text="PC 동기화 앱을 쓰는 경우 폴더를 선택하면 목록을 읽습니다. Open API는 MYBOX에서 발급한 개인 액세스 토큰으로도 연결할 수 있습니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,10"/>
+                                        <DockPanel LastChildFill="False"><Button Content="동기화 폴더 선택" Click="MyBoxFolderConnect_Click" Style="{StaticResource PrimaryButton}"/><PasswordBox x:Name="MyBoxTokenBox" Width="240" Margin="8,0,0,0" ToolTip="MYBOX 개인 액세스 토큰"/><Button Content="토큰 연결" Click="MyBoxConnect_Click" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/><Button x:Name="MyBoxDisconnectButton" Content="연결 해제" Click="MyBoxDisconnect_Click" Style="{StaticResource QuietButton}" Margin="4,0,0,0" Visibility="Collapsed"/></DockPanel>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,0,12">
+                                    <StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="PikPak" FontSize="15" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="WebDAV" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="SemiBold"/></Grid><TextBlock Text="Premium 설정에서 WebDAV를 켜고 별도 자격 증명을 발급한 뒤 저장소 탭에서 연결하세요." TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,0"/></StackPanel>
+                                </Border>
+                                <Border Background="{StaticResource WarningSurface}" BorderBrush="#E4CF9E" BorderThickness="1" CornerRadius="10" Padding="13"><TextBlock Text="MYBOX Open API는 암호 폴더와 공유받은 폴더를 지원하지 않습니다. DRM 또는 접근 제한은 우회하지 않습니다." Foreground="{StaticResource WarningInk}" TextWrapping="Wrap" FontSize="12"/></Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </TabItem>
+
+                <TabItem Header="저장소">
+                    <Border Background="{StaticResource Glass}" BorderBrush="#B5C9D8" BorderThickness="1" CornerRadius="0,13,13,13" Padding="22" Effect="{StaticResource SoftShadow}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="SMB / WebDAV 연결" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="SMB는 Windows 네트워크 공유(UNC), WebDAV는 폴더 목록과 HTTP Range 재생을 사용합니다. 자격 증명은 이 Windows 사용자 계정에만 열리도록 암호화합니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,18"/>
+                                <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,16">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="112"/><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="프로토콜" Style="{StaticResource FieldLabel}" Margin="0,0,10,10"/><ComboBox x:Name="StorageKindBox" Grid.Row="0" Grid.Column="1" SelectedIndex="0" Margin="0,0,14,10"><ComboBoxItem Content="SMB 공유"/><ComboBoxItem Content="WebDAV"/></ComboBox>
+                                        <TextBlock Grid.Row="0" Grid.Column="2" Text="표시 이름" Style="{StaticResource FieldLabel}" Margin="0,0,10,10"/><TextBox x:Name="StorageNameBox" Grid.Row="0" Grid.Column="3" Margin="0,0,0,10"/>
+                                        <TextBlock Grid.Row="1" Text="경로 / URL" Style="{StaticResource FieldLabel}" Margin="0,0,10,10"/><TextBox x:Name="StorageEndpointBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,10" ToolTip="SMB: \\server\share | WebDAV: https://host/dav/"/>
+                                        <TextBlock Grid.Row="2" Text="사용자 이름" Style="{StaticResource FieldLabel}" Margin="0,0,10,10"/><TextBox x:Name="StorageUsernameBox" Grid.Row="2" Grid.Column="1" Margin="0,0,14,10"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="비밀번호" Style="{StaticResource FieldLabel}" Margin="0,0,10,10"/><PasswordBox x:Name="StoragePasswordBox" Grid.Row="2" Grid.Column="3" Margin="0,0,0,10"/>
+                                        <Button Grid.Row="3" Grid.Column="1" Content="연결 확인 후 저장" Click="AddStorage_Click" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
+                                        <TextBlock x:Name="StorageStatus" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Foreground="{StaticResource Muted}" Margin="0,9,0,0" TextWrapping="Wrap"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="저장된 연결" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,9"/>
+                                <ListBox x:Name="StorageList" MinHeight="100" MaxHeight="220">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Endpoint}" Foreground="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/></StackPanel><Button Grid.Column="1" Content="연결 삭제" Tag="{Binding Id}" Click="RemoveStorage_Click" Style="{StaticResource QuietButton}" VerticalAlignment="Center"/></Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <Border Background="{StaticResource WarningSurface}" BorderBrush="#E4CF9E" BorderThickness="1" CornerRadius="10" Padding="13" Margin="0,14,0,0"><TextBlock Text="NFS는 Windows 기능 설치와 권한 설정이 필요해 별도 작업입니다. MYBOX API는 암호 폴더와 공유받은 폴더를 지원하지 않습니다." Foreground="{StaticResource WarningInk}" TextWrapping="Wrap" FontSize="12"/></Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </TabItem>
+            </TabControl>
+
+            <Button Grid.Row="2" Content="닫기" Click="Close_Click" HorizontalAlignment="Right" MinWidth="92" Margin="0,16,0,0"/>
+        </Grid>
+    </Grid>
+</Window>
