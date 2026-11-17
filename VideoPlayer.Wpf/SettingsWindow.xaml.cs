@@ -276,6 +276,23 @@ public partial class SettingsWindow : Window
         ModelDetails.Text = $"이름: {model.Name}\n계열: {Empty(model.Family)}\n파라미터: {Empty(model.ParameterSize)}\n양자화: {Empty(model.Quantization)}\n\n확인된 범위: Ollama가 반환한 모델 설치 및 메타데이터.\n미확인: 한국어 번역 품질, 자막 번역 성능, 영상/오디오 인식(ASR), 음성 생성(TTS), GPU/메모리 성능. 현재 PoC에서는 실제 번역 또는 TTS에 연결되지 않습니다.";
         SaveSettings();
     }
+
+    private void GeminiGuide_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://reensdogood.github.io/video-player-community/GEMINI_API_SETUP_GUIDE.html",
+                UseShellExecute = true
+            });
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            MessageBox.Show(this, "기본 브라우저를 열지 못했습니다. 아래 주소를 복사해 브라우저에서 열어주세요.\nhttps://reensdogood.github.io/video-player-community/GEMINI_API_SETUP_GUIDE.html", "Gemini API 안내", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
     private static string Empty(string? value) => string.IsNullOrWhiteSpace(value) ? "정보 없음" : value;
     private static string GetString(JsonElement item, string key) => item.ValueKind == JsonValueKind.Object && item.TryGetProperty(key, out var v) ? v.GetString() ?? "" : "";
     private static long GetLong(JsonElement item, string key) => item.ValueKind == JsonValueKind.Object && item.TryGetProperty(key, out var v) && v.TryGetInt64(out var value) ? value : 0;

@@ -20,7 +20,7 @@
 - PikPak Premium WebDAV 연결 지원. PikPak 설정에서 발급한 전용 자격 증명을 저장소 탭에 입력
 - Google Drive, OneDrive, Dropbox는 설정의 **동기화 폴더 선택**으로 PC 동기화 앱이 관리하는 폴더를 저장하고 앱 안에서 하위 폴더·영상 목록을 탐색할 수 있습니다. 이 방식은 공급자의 직접 API 연결이 아니라 로컬 동기화 폴더 접근입니다. 온라인 전용 항목은 공급자 앱의 다운로드/자리표시자 정책과 네트워크 상태에 따라 재생이 달라질 수 있습니다. 브라우저 로그인 기반 직접 API 목록 조회·재생 relay 코드도 포함하지만 PoC에는 제품 OAuth 앱 등록값이 없으므로 로그인은 제공되지 않습니다.
 - Naver MYBOX 동기화 폴더 연결과 Open API 연결: PC 동기화 폴더 탐색 또는 개인 액세스 토큰 확인, 파일/폴더 목록 탐색, 임시 다운로드 URL을 통한 영상 재생 경로
-- Gemini API 키 발급 과정을 클릭하며 확인할 수 있는 한국어 안내: [Gemini API 연결 준비 가이드](docs/GEMINI_API_SETUP_GUIDE.html). 현재 앱에는 키 입력/호출 기능이 아직 없습니다.
+- Gemini API 키 발급 과정을 클릭하며 확인할 수 있는 한국어 안내: [Gemini API 연결 준비 가이드](https://reensdogood.github.io/video-player-community/GEMINI_API_SETUP_GUIDE.html). 설정의 `번역 모델` 탭에서도 열 수 있습니다. 현재 앱에는 키 입력/호출 기능이 아직 없습니다.
 
 ## 아직 제공하지 않는 기능
 
