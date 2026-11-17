@@ -20,13 +20,13 @@
 - PikPak Premium WebDAV 연결 지원. PikPak 설정에서 발급한 전용 자격 증명을 저장소 탭에 입력
 - Google Drive, OneDrive, Dropbox는 설정의 **동기화 폴더 선택**으로 PC 동기화 앱이 관리하는 폴더를 저장하고 앱 안에서 하위 폴더·영상 목록을 탐색할 수 있습니다. 이 방식은 공급자의 직접 API 연결이 아니라 로컬 동기화 폴더 접근입니다. 온라인 전용 항목은 공급자 앱의 다운로드/자리표시자 정책과 네트워크 상태에 따라 재생이 달라질 수 있습니다. 브라우저 로그인 기반 직접 API 목록 조회·재생 relay 코드도 포함하지만 PoC에는 제품 OAuth 앱 등록값이 없으므로 로그인은 제공되지 않습니다.
 - Naver MYBOX 동기화 폴더 연결과 Open API 연결: PC 동기화 폴더 탐색 또는 개인 액세스 토큰 확인, 파일/폴더 목록 탐색, 임시 다운로드 URL을 통한 영상 재생 경로
-- Gemini API 키 발급 과정을 클릭하며 확인할 수 있는 한국어 안내: [Gemini API 연결 준비 가이드](https://reensdogood.github.io/video-player-community/GEMINI_API_SETUP_GUIDE.html). 설정의 `번역 모델` 탭에서도 열 수 있습니다. 현재 앱에는 키 입력/호출 기능이 아직 없습니다.
+- Gemini API 번역: 설정에서 사용 여부, 모델, 대상 언어를 고르고 개인 API 키를 Windows 사용자 계정으로 보호해 저장합니다. 같은 폴더·이름의 SRT/VTT, 직접 연 SRT/VTT, CC 생성 자막을 전체 번역한 뒤 별도 자막 트랙으로 추가합니다. [Gemini API 연결 준비 가이드](https://reensdogood.github.io/video-player-community/GEMINI_API_SETUP_GUIDE.html)도 설정에서 열 수 있습니다.
 
 ## 아직 제공하지 않는 기능
 
-NFS, 자막 번역/TTS, 소셜 플랫폼 페이지에서 영상 파일 추출/다운로드, Naver DRM 콘텐츠 재생은 제공하지 않거나 실계정 검증이 끝나지 않았습니다. YouTube/Vimeo/SNS URL은 서비스 자체 웹 플레이어로 재생하며 사이트 정책, 로그인, 게시자 임베드 설정에 따라 재생이 제한될 수 있습니다. URL 다운로드는 HTTP/HTTPS 직접 파일 주소만 대상으로 합니다. YouTube API 정책은 사전 서면 승인 없는 다운로드와 오프라인 재생을 금지합니다. Vimeo는 영상 소유자 설정과 API 권한이 다운로드를 허용하는 경우만 파일 접근을 제공합니다. DRM 또는 접근 제한을 우회하지 않습니다. Google Drive/OneDrive/Dropbox OAuth 경로는 코드에 구현됐지만 제품 개발자 앱 등록과 계정 실측을 마치지 않았습니다. MYBOX는 공식 Open API의 개인 액세스 토큰으로 연결하며, 토큰은 사용자가 MYBOX 설정에서 생성해야 합니다. 암호 폴더와 공유받은 폴더는 MYBOX Open API 지원 범위가 아닙니다. Ollama 모델 선택은 설정에 저장되지만 현재 번역 파이프라인에는 연결되지 않습니다.
+NFS, 번역 TTS, 소셜 플랫폼 페이지에서 영상 파일 추출/다운로드, Naver DRM 콘텐츠 재생은 제공하지 않거나 실계정 검증이 끝나지 않았습니다. Gemini 번역은 사용자가 제공한 API 키와 네트워크 연결이 필요하며 Google 사용량/요금 정책이 적용됩니다. 번역 대상은 SRT/VTT 자막 텍스트이고, 내장 자막 트랙과 웹 플레이어·온라인 영상 자막은 지원하지 않습니다. YouTube/Vimeo/SNS URL은 서비스 자체 웹 플레이어로 재생하며 사이트 정책, 로그인, 게시자 임베드 설정에 따라 재생이 제한될 수 있습니다. URL 다운로드는 HTTP/HTTPS 직접 파일 주소만 대상으로 합니다. YouTube API 정책은 사전 서면 승인 없는 다운로드와 오프라인 재생을 금지합니다. Vimeo는 영상 소유자 설정과 API 권한이 다운로드를 허용하는 경우만 파일 접근을 제공합니다. DRM 또는 접근 제한을 우회하지 않습니다. Google Drive/OneDrive/Dropbox OAuth 경로는 코드에 구현됐지만 제품 개발자 앱 등록과 계정 실측을 마치지 않았습니다. MYBOX는 공식 Open API의 개인 액세스 토큰으로 연결하며, 토큰은 사용자가 MYBOX 설정에서 생성해야 합니다. 암호 폴더와 공유받은 폴더는 MYBOX Open API 지원 범위가 아닙니다. Ollama 모델 선택은 설정에 저장되지만 현재 번역 파이프라인에는 연결되지 않습니다.
 
-자막 번역은 다음 단계에서 로컬 모델과 사용자가 선택한 외부 번역 API를 연동할 수 있도록 구조를 확장할 예정입니다. 번들 CC 엔진은 CPU 모드로 동작하며 긴 영상은 준비 시간이 길 수 있습니다. 번역, 실시간 ASR, TTS는 미지원입니다.
+Gemini 번역은 자막을 24개 구간씩 나눠 전체 처리합니다. 긴 자막은 여러 API 요청으로 처리돼 준비 시간이 늘고 사용량이 발생합니다. 번역은 원본 SRT/VTT를 덮어쓰지 않으며 번역본을 별도 자막 트랙으로 추가합니다. 번들 CC 엔진은 CPU 모드로 동작하며 긴 영상은 준비 시간이 길 수 있습니다. 실시간 ASR과 번역 TTS는 미지원입니다.
 
 ## 실행
 
@@ -49,10 +49,10 @@ dotnet publish .\VideoPlayer.Wpf\VideoPlayer.Wpf.csproj -c Release -r win-x64 --
 ### Windows 설치 파일과 업데이트 패키지 생성
 
 ```powershell
-.\scripts\Build-WindowsInstaller.ps1 -Version 0.1.13
+.\scripts\Build-WindowsInstaller.ps1 -Version 0.1.14
 ```
 
-`artifacts/windows-installer/0.1.13`에 사용자별 설치용 `beondiueyow-ohmyplayer-win-Setup.exe`, `beondiueyow-ohmyplayer-win.msi`, 포터블 ZIP, 업데이트 패키지와 릴리스 피드가 생성됩니다. 이 패키지에는 CC 실행 엔진, 모델, FFmpeg가 함께 포함돼 설치 파일이 약 1GB에 이를 수 있습니다. 기존 설치본의 업데이트 연결을 유지하기 위해 내부 업데이트 식별자는 그대로 둡니다. 앱은 매 시작 때 업데이트를 확인하며 메인 화면에서 수동 확인도 할 수 있습니다. 실제 업데이트를 받게 하려면 생성된 파일을 GitHub 릴리스에 게시해야 합니다. 현재 설치 파일은 서명되지 않아 Windows 게시자 경고가 보일 수 있습니다.
+`artifacts/windows-installer/0.1.14`에 사용자별 설치용 `beondiueyow-ohmyplayer-win-Setup.exe`, `beondiueyow-ohmyplayer-win.msi`, 포터블 ZIP, 업데이트 패키지와 릴리스 피드가 생성됩니다. 이 패키지에는 CC 실행 엔진, 모델, FFmpeg가 함께 포함돼 설치 파일이 약 1GB에 이를 수 있습니다. 기존 설치본의 업데이트 연결을 유지하기 위해 내부 업데이트 식별자는 그대로 둡니다. 앱은 매 시작 때 업데이트를 확인하며 메인 화면에서 수동 확인도 할 수 있습니다. 실제 업데이트를 받게 하려면 생성된 파일을 GitHub 릴리스에 게시해야 합니다. 현재 설치 파일은 서명되지 않아 Windows 게시자 경고가 보일 수 있습니다.
 
 CPU용 CC 런타임을 새로 만들 때는 Python과 FFmpeg가 준비된 Windows 빌드 PC에서 `scripts\Build-CaptionRuntime.ps1`을 먼저 실행합니다. Whisper small 모델은 빌드 때 자동으로 내려받아 설치 파일에 포함됩니다.
 
@@ -94,3 +94,4 @@ MYBOX 연결은 MYBOX 웹의 **설정 → 계정 및 개인 액세스 토큰 관
 - [0.1.1 릴리스 노트](docs/RELEASE_NOTES_0.1.1.md)
 - [0.1.12 릴리스 노트](docs/RELEASE_NOTES_0.1.12.md)
 - [0.1.13 릴리스 노트](docs/RELEASE_NOTES_0.1.13.md)
+- [0.1.14 릴리스 노트](docs/RELEASE_NOTES_0.1.14.md)

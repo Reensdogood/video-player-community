@@ -228,13 +228,18 @@ public partial class MainWindow : Window
         if (playerSettings.SubtitleBold) media.AddOption(":freetype-bold");
         media.AddOption($":freetype-outline-thickness={playerSettings.SubtitleOutline switch { "없음" => "0", "두껍게" => "0.2", _ => "0.1" }}");
         _preferAutoSubtitle = false;
+        string? translationSubtitlePath = null;
         if (!item.IsRemote)
         {
             foreach (var subtitle in FindMatchingSubtitles(item.Mrl))
+            {
                 _preferAutoSubtitle |= media.AddSlave(MediaSlaveType.Subtitle, 2, new Uri(subtitle));
+                var extension = Path.GetExtension(subtitle);
+                if (translationSubtitlePath is null && (extension.Equals(".srt", StringComparison.OrdinalIgnoreCase) || extension.Equals(".vtt", StringComparison.OrdinalIgnoreCase))) translationSubtitlePath = subtitle;
+            }
         }
         ShowPlayerWindow();
-        _playerWindow?.SetNowPlaying(item.Title, _preferAutoSubtitle, item.IsRemote ? null : item.Mrl);
+        _playerWindow?.SetNowPlaying(item.Title, _preferAutoSubtitle, item.IsRemote ? null : item.Mrl, translationSubtitlePath);
         // Show the WPF VideoView before starting LibVLC. Starting playback first can make
         // LibVLC create its own native video window, leaving the in-window controls blank.
         _player.Play(media);

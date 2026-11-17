@@ -32,6 +32,18 @@ public partial class SettingsWindow : Window
         _settings = AppSettingsStore.Load();
         _selectedModel = _settings.SelectedLocalModel;
         StorageList.ItemsSource = _settings.StorageConnections;
+        GeminiTranslationEnabledBox.IsChecked = _settings.GeminiTranslationEnabled;
+        GeminiModelBox.Text = string.IsNullOrWhiteSpace(_settings.GeminiModel) ? "gemini-3.8-flash" : _settings.GeminiModel;
+        GeminiTargetLanguageBox.SelectedItem = GeminiTargetLanguageBox.Items.Cast<ComboBoxItem>().FirstOrDefault(item => item.Tag?.ToString() == _settings.GeminiTargetLanguage) ?? GeminiTargetLanguageBox.Items[0];
+        try
+        {
+            GeminiApiKeyBox.Password = UserSecret.Unprotect(_settings.ProtectedGeminiApiKey);
+            GeminiStatusText.Text = string.IsNullOrWhiteSpace(GeminiApiKeyBox.Password) ? "API 키를 입력하고 설정을 저장하세요." : "API 키가 이 Windows 사용자 계정으로 보호되어 저장돼 있습니다.";
+        }
+        catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or FormatException)
+        {
+            GeminiStatusText.Text = "저장된 API 키를 읽지 못했습니다. 새 키를 입력해 저장하세요.";
+        }
         _loadingPlayerPreferences = true;
         SubtitleFontBox.ItemsSource = System.Windows.Media.Fonts.SystemFontFamilies.Select(font => font.Source).OrderBy(name => name).ToList();
         SubtitleFontBox.SelectedItem = SubtitleFontBox.Items.Contains(_settings.SubtitleFontFamily) ? _settings.SubtitleFontFamily : "Segoe UI";
@@ -290,6 +302,71 @@ public partial class SettingsWindow : Window
         catch (System.ComponentModel.Win32Exception)
         {
             MessageBox.Show(this, "기본 브라우저를 열지 못했습니다. 아래 주소를 복사해 브라우저에서 열어주세요.\nhttps://reensdogood.github.io/video-player-community/GEMINI_API_SETUP_GUIDE.html", "Gemini API 안내", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private (string Model, string ApiKey, string TargetLanguage) ReadGeminiForm()
+    {
+        var model = GeminiModelBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(model)) throw new InvalidOperationException("Gemini 모델 이름을 입력해 주세요.");
+        var target = (GeminiTargetLanguageBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "한국어";
+        var apiKey = GeminiApiKeyBox.Password;
+        if (string.IsNullOrWhiteSpace(apiKey) && !string.IsNullOrWhiteSpace(_settings.ProtectedGeminiApiKey))
+            apiKey = UserSecret.Unprotect(_settings.ProtectedGeminiApiKey);
+        if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException("Google AI Studio에서 발급한 Gemini API 키를 입력해 주세요.");
+        return (model, apiKey, target);
+    }
+
+    private void SaveGeminiSettings_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _settings.GeminiTranslationEnabled = GeminiTranslationEnabledBox.IsChecked == true;
+            _settings.GeminiModel = GeminiModelBox.Text.Trim();
+            _settings.GeminiTargetLanguage = (GeminiTargetLanguageBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "한국어";
+            if (!string.IsNullOrWhiteSpace(GeminiApiKeyBox.Password)) _settings.ProtectedGeminiApiKey = UserSecret.Protect(GeminiApiKeyBox.Password);
+            if (_settings.GeminiTranslationEnabled && string.IsNullOrWhiteSpace(_settings.ProtectedGeminiApiKey))
+                throw new InvalidOperationException("자동 번역을 켜려면 먼저 Gemini API 키를 입력하고 저장하세요.");
+            AppSettingsStore.Save(_settings);
+            GeminiStatusText.Text = _settings.GeminiTranslationEnabled
+                ? "저장됨 · 다음 자막부터 Gemini 번역을 사용합니다."
+                : "저장됨 · 자동 번역이 꺼졌습니다.";
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
+        {
+            GeminiStatusText.Text = ex.Message;
+        }
+    }
+
+    private async void TestGemini_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var (model, apiKey, target) = ReadGeminiForm();
+            GeminiStatusText.Text = "짧은 문장으로 Gemini 연결을 확인하는 중…";
+            var result = await new GeminiSubtitleTranslator().TranslateTextsAsync(["Welcome. Subtitles are ready."], model, apiKey, target);
+            GeminiStatusText.Text = $"연결 성공 · 번역 예시: {result[0]}";
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or TaskCanceledException or JsonException or System.Security.Cryptography.CryptographicException)
+        {
+            GeminiStatusText.Text = $"연결 확인 실패 · {ex.Message}";
+        }
+    }
+
+    private void ClearGeminiKey_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.ProtectedGeminiApiKey = "";
+        GeminiApiKeyBox.Clear();
+        _settings.GeminiTranslationEnabled = false;
+        GeminiTranslationEnabledBox.IsChecked = false;
+        try
+        {
+            AppSettingsStore.Save(_settings);
+            GeminiStatusText.Text = "저장된 Gemini API 키를 삭제하고 자동 번역을 껐습니다.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            GeminiStatusText.Text = $"키 삭제를 저장하지 못했습니다: {ex.Message}";
         }
     }
 

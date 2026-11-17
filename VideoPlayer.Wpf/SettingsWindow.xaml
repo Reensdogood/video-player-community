@@ -195,7 +195,7 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                                 <TextBlock Text="로컬 모델" Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="Ollama가 PC에서 실행 중이면 설치된 모델과 메타데이터를 확인합니다. 현재 PoC에서는 실제 번역이나 TTS 처리는 연결되지 않았습니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,18"/>
+                                <TextBlock Text="Ollama가 PC에서 실행 중이면 설치된 로컬 모델과 메타데이터를 확인합니다. Gemini API 번역은 아래 Gemini 설정에서 별도로 켜고 끕니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,18"/>
                                 <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,0,14">
                                     <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="270"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="서버 주소" Style="{StaticResource FieldLabel}" Margin="0,0,12,0"/>
@@ -209,12 +209,16 @@
                                 <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="15">
                                     <TextBlock x:Name="ModelDetails" Text="모델을 선택하면 API에서 확인 가능한 정보와 미검증 항목을 표시합니다." TextWrapping="Wrap" Foreground="{StaticResource Ink}"/>
                                 </Border>
-                                <TextBlock Text="번역 품질, 자막 인식(ASR), 음성 생성(TTS), GPU 요구사항은 모델마다 달라 별도 검증이 필요합니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,12,0,0"/>
+                                        <TextBlock Text="이 목록은 Ollama가 보고한 로컬 모델 정보입니다. Gemini API를 사용하려면 아래에서 개인 API 키와 번역 설정을 저장하세요." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,12,0,0"/>
                                 <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,18,0,0">
                                     <StackPanel>
-                                        <TextBlock Text="Gemini API 연결 안내" FontSize="15" FontWeight="SemiBold"/>
-                                        <TextBlock Text="Google 계정으로 API 키를 준비하는 과정을 단계별로 확인할 수 있습니다. 현재 앱은 Gemini API 번역 기능을 아직 지원하지 않습니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,5,0,11"/>
-                                        <Button Content="Gemini API 발급 가이드 열기" Click="GeminiGuide_Click" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
+                                        <TextBlock Text="Gemini API 자막 번역" FontSize="15" FontWeight="SemiBold"/>
+                                        <TextBlock Text="번역을 켜면 SRT/VTT 자막 텍스트만 Google Gemini로 보내 번역 자막을 만듭니다. 영상과 음성은 전송하지 않습니다. API 키는 현재 Windows 사용자 계정으로 보호해 저장하지만 PC 앱 메모리에서는 사용 중 노출될 수 있으니 본인용 키를 사용하세요. Google 사용량 한도나 요금이 적용됩니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,5,0,12"/>
+                                        <CheckBox x:Name="GeminiTranslationEnabledBox" Content="자동 자막 번역 사용" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,9"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="Gemini 모델" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/><TextBox x:Name="GeminiModelBox" Grid.Column="1" Text="gemini-3.8-flash"/></Grid>
+                                        <Grid Margin="0,0,0,9"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="번역 언어" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/><ComboBox x:Name="GeminiTargetLanguageBox" Grid.Column="1"><ComboBoxItem Content="한국어" Tag="한국어"/><ComboBoxItem Content="English" Tag="영어"/><ComboBoxItem Content="日本語" Tag="일본어"/><ComboBoxItem Content="简体中文" Tag="중국어 간체"/><ComboBoxItem Content="繁體中文" Tag="중국어 번체"/></ComboBox></Grid>
+                                        <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="API 키" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/><PasswordBox x:Name="GeminiApiKeyBox" Grid.Column="1" ToolTip="Google AI Studio에서 발급한 Gemini API 키"/></Grid>
+                                        <DockPanel LastChildFill="False"><Button Content="설정 저장" Click="SaveGeminiSettings_Click" Style="{StaticResource PrimaryButton}"/><Button Content="연결 확인" Click="TestGemini_Click" Margin="8,0,0,0"/><Button Content="키 삭제" Click="ClearGeminiKey_Click" Margin="8,0,0,0"/><Button Content="발급 가이드" Click="GeminiGuide_Click" Margin="8,0,0,0"/><TextBlock x:Name="GeminiStatusText" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/></DockPanel>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

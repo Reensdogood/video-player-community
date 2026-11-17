@@ -51,6 +51,10 @@ public sealed class SavedSettings
     public int SubtitleFontSize { get; set; } = 28;
     public bool SubtitleBold { get; set; }
     public string SubtitleOutline { get; set; } = "표준";
+    public bool GeminiTranslationEnabled { get; set; }
+    public string GeminiModel { get; set; } = "gemini-3.8-flash";
+    public string GeminiTargetLanguage { get; set; } = "한국어";
+    public string ProtectedGeminiApiKey { get; set; } = "";
     public List<StorageConnection> StorageConnections { get; set; } = [];
     public List<CloudAccount> CloudAccounts { get; set; } = [];
 }

@@ -26,6 +26,7 @@ public partial class PlayerWindow : Window
     private bool _seeking;
     private bool _changingTracks;
     private bool _selectAutoSubtitle;
+    private bool _selectLastSubtitle;
     private bool _isMuted;
     private bool _platformPageMode;
     private Uri? _platformUri;
@@ -37,6 +38,7 @@ public partial class PlayerWindow : Window
     private Process? _captionProcess;
     private bool _closed;
     private bool _ended;
+    private CancellationTokenSource? _geminiTranslationCancellation;
 
     public PlayerWindow(MediaPlayer player, Action previous, Action next, Action stop, Action openFile)
     {
@@ -66,6 +68,7 @@ public partial class PlayerWindow : Window
         Closed += (_, _) =>
         {
             _closed = true;
+            CancelGeminiTranslation();
             try { if (_captionProcess is { HasExited: false }) _captionProcess.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
             StopCaptionVoice();
             _timer.Stop();
@@ -80,8 +83,9 @@ public partial class PlayerWindow : Window
         Loaded += (_, _) => { if (_player.Media is not null) EmptyState.Visibility = Visibility.Collapsed; };
     }
 
-    public void SetNowPlaying(string title, bool selectAutoSubtitle = false, string? localVideoPath = null)
+    public void SetNowPlaying(string title, bool selectAutoSubtitle = false, string? localVideoPath = null, string? sourceSubtitlePath = null)
     {
+        CancelGeminiTranslation();
         _ended = false;
         _localVideoPath = localVideoPath;
         _captionCues.Clear();
@@ -99,8 +103,15 @@ public partial class PlayerWindow : Window
         PlaybackControls.Visibility = Visibility.Visible;
         OpenExternalButton.Visibility = Visibility.Collapsed;
         NowPlayingText.Text = title;
+        TranslationStatusText.Text = "";
         _selectAutoSubtitle = selectAutoSubtitle;
         if (_player.IsPlaying) RefreshTracks();
+        var settings = AppSettingsStore.Load();
+        if (settings.GeminiTranslationEnabled && localVideoPath is not null)
+        {
+            if (sourceSubtitlePath is null) TranslationStatusText.Text = "번역 켜짐 · 외부 SRT/VTT 자막을 찾지 못했습니다.";
+            else Dispatcher.BeginInvoke(new Action(async () => await TranslateSubtitleAsync(sourceSubtitlePath)));
+        }
     }
 
     public void ShowEmptyState()
@@ -327,9 +338,95 @@ public partial class PlayerWindow : Window
                 NowPlayingText.Text = $"{NowPlayingText.Text} · {System.IO.Path.GetFileName(dialog.FileName)}";
                 _selectAutoSubtitle = true;
                 RefreshTracks();
+                if (string.Equals(Path.GetExtension(dialog.FileName), ".srt", StringComparison.OrdinalIgnoreCase) || string.Equals(Path.GetExtension(dialog.FileName), ".vtt", StringComparison.OrdinalIgnoreCase))
+                    _ = TranslateSubtitleAsync(dialog.FileName);
+                else if (AppSettingsStore.Load().GeminiTranslationEnabled)
+                    TranslationStatusText.Text = "Gemini 번역은 SRT/VTT 자막 파일을 지원합니다.";
             }
         }
     }
+
+    private async Task TranslateSubtitleAsync(string sourceSubtitlePath)
+    {
+        if (_closed || !File.Exists(sourceSubtitlePath)) return;
+        var settings = AppSettingsStore.Load();
+        if (!settings.GeminiTranslationEnabled) return;
+        if (!string.Equals(Path.GetExtension(sourceSubtitlePath), ".srt", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(Path.GetExtension(sourceSubtitlePath), ".vtt", StringComparison.OrdinalIgnoreCase))
+        {
+            TranslationStatusText.Text = "Gemini 번역은 SRT/VTT 자막을 지원합니다.";
+            return;
+        }
+
+        CancelGeminiTranslation();
+        var cancellation = new CancellationTokenSource();
+        var cancellationToken = cancellation.Token;
+        _geminiTranslationCancellation = cancellation;
+        var playbackPath = _localVideoPath;
+        try
+        {
+            var apiKey = UserSecret.Unprotect(settings.ProtectedGeminiApiKey);
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                TranslationStatusText.Text = "번역 설정에서 Gemini API 키를 저장해 주세요.";
+                return;
+            }
+            TranslationStatusText.Text = "Gemini 자막 번역 준비 중…";
+            var progress = new Progress<(int Completed, int Total)>(value =>
+            {
+                if (!_closed && ReferenceEquals(_geminiTranslationCancellation, cancellation))
+                    TranslationStatusText.Text = $"Gemini 자막 번역 중 · {value.Completed:N0}/{value.Total:N0}";
+            });
+            var translatedPath = await new GeminiSubtitleTranslator().TranslateFileAsync(sourceSubtitlePath,
+                string.IsNullOrWhiteSpace(settings.GeminiModel) ? "gemini-3.8-flash" : settings.GeminiModel,
+                apiKey, settings.GeminiTargetLanguage, progress, cancellationToken);
+            if (_closed || cancellation.IsCancellationRequested || !string.Equals(playbackPath, _localVideoPath, StringComparison.OrdinalIgnoreCase)) return;
+            if (_player.Media is null) return;
+            if (!_player.AddSlave(MediaSlaveType.Subtitle, new Uri(translatedPath).AbsoluteUri, true))
+                throw new InvalidOperationException("번역 자막을 재생창에 추가하지 못했습니다.");
+            LoadCaptionCues(translatedPath);
+            var translationName = Path.GetFileNameWithoutExtension(translatedPath);
+            var selectedTranslationTrack = false;
+            for (var attempt = 0; attempt < 8; attempt++)
+            {
+                _selectLastSubtitle = true;
+                RefreshTracks();
+                if ((_player.SpuDescription ?? []).Any(track => track.Name.Contains(translationName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    selectedTranslationTrack = true;
+                    break;
+                }
+                await Task.Delay(250, cancellationToken);
+            }
+            TranslationStatusText.Text = selectedTranslationTrack
+                ? $"{settings.GeminiTargetLanguage} 번역 자막 적용됨"
+                : $"{settings.GeminiTargetLanguage} 번역 완료 · 자막 메뉴에서 번역본 선택";
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!_closed && !cancellation.IsCancellationRequested)
+                TranslationStatusText.Text = $"번역 실패 · {ex.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(_geminiTranslationCancellation, cancellation))
+            {
+                _geminiTranslationCancellation = null;
+                cancellation.Dispose();
+            }
+        }
+    }
+
+    private void CancelGeminiTranslation()
+    {
+        var cancellation = _geminiTranslationCancellation;
+        _geminiTranslationCancellation = null;
+        if (cancellation is null) return;
+        try { cancellation.Cancel(); } catch (ObjectDisposedException) { }
+        cancellation.Dispose();
+    }
+
     private async void GenerateCaption_Click(object sender, RoutedEventArgs e)
     {
         if (_localVideoPath is null || !File.Exists(_localVideoPath))
@@ -370,6 +467,7 @@ public partial class PlayerWindow : Window
             LoadCaptionCues(captionFile);
             _selectAutoSubtitle = true;
             RefreshTracks();
+            if (AppSettingsStore.Load().GeminiTranslationEnabled) await TranslateSubtitleAsync(captionFile);
             _player.Time = 0;
             _selectAutoSubtitle = true;
             _player.Play();
@@ -437,9 +535,12 @@ public partial class PlayerWindow : Window
         SubtitleTracks.Items.Add(new TrackChoice(-1, "자막 끔"));
         foreach (var track in _player.SpuDescription ?? []) SubtitleTracks.Items.Add(new TrackChoice(track.Id, track.Name));
         AudioTracks.SelectedIndex = 0;
-        SubtitleTracks.SelectedIndex = _selectAutoSubtitle && SubtitleTracks.Items.Count > 1 ? 1 : 0;
+        SubtitleTracks.SelectedIndex = _selectLastSubtitle && SubtitleTracks.Items.Count > 1
+            ? SubtitleTracks.Items.Count - 1
+            : _selectAutoSubtitle && SubtitleTracks.Items.Count > 1 ? 1 : 0;
         var subtitle = SubtitleTracks.SelectedItem as TrackChoice;
         _selectAutoSubtitle = false;
+        _selectLastSubtitle = false;
         _changingTracks = false;
         if (subtitle is { Id: > 0 }) _player.SetSpu(subtitle.Id);
     }
