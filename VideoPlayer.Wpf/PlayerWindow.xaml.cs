@@ -2,6 +2,7 @@ using LibVLCSharp.Shared;
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -32,6 +33,10 @@ public partial class PlayerWindow : Window
     private Uri? _platformUri;
     private int _volumeBeforeMute = 80;
     private string? _localVideoPath;
+    private Func<string, CancellationToken, Task>? _webDavTranscriptionLoader;
+    private string _webDavTranscriptionExtension = ".mp4";
+    private CancellationTokenSource? _transcriptionDownloadCancellation;
+    private string? _stagedWebDavSourceDirectory;
     private readonly List<(long Start, long End, string Text)> _captionCues = [];
     private int _spokenCue = -1;
     private dynamic? _voice;
@@ -69,7 +74,9 @@ public partial class PlayerWindow : Window
         {
             _closed = true;
             CancelGeminiTranslation();
+            CancelTranscriptionDownload();
             try { if (_captionProcess is { HasExited: false }) _captionProcess.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+            CleanupStagedWebDavSource();
             StopCaptionVoice();
             _timer.Stop();
             _controlsHideTimer.Stop();
@@ -83,11 +90,18 @@ public partial class PlayerWindow : Window
         Loaded += (_, _) => { if (_player.Media is not null) EmptyState.Visibility = Visibility.Collapsed; };
     }
 
-    public void SetNowPlaying(string title, bool selectAutoSubtitle = false, string? localVideoPath = null, string? sourceSubtitlePath = null)
+    public void SetNowPlaying(string title, bool selectAutoSubtitle = false, string? localVideoPath = null, string? sourceSubtitlePath = null,
+        Func<string, CancellationToken, Task>? webDavTranscriptionLoader = null, string? webDavTranscriptionExtension = null)
     {
         CancelGeminiTranslation();
+        CancelTranscriptionDownload();
+        try { if (_captionProcess is { HasExited: false }) _captionProcess.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+        CleanupStagedWebDavSource();
         _ended = false;
         _localVideoPath = localVideoPath;
+        _webDavTranscriptionLoader = webDavTranscriptionLoader;
+        _webDavTranscriptionExtension = !string.IsNullOrWhiteSpace(webDavTranscriptionExtension)
+            && Regex.IsMatch(webDavTranscriptionExtension, @"^\.[A-Za-z0-9]{1,8}$") ? webDavTranscriptionExtension : ".mp4";
         _captionCues.Clear();
         _spokenCue = -1;
         StopCaptionVoice();
@@ -112,10 +126,18 @@ public partial class PlayerWindow : Window
             if (sourceSubtitlePath is null) TranslationStatusText.Text = "자동 번역 켜짐 · 외부 SRT/VTT 자막을 찾지 못했습니다.";
             else Dispatcher.BeginInvoke(new Action(async () => await TranslateSubtitleAsync(sourceSubtitlePath)));
         }
+        else if ((settings.LocalTranslationEnabled || settings.GeminiTranslationEnabled) && webDavTranscriptionLoader is not null)
+            TranslationStatusText.Text = "자동 번역 켜짐 · CC 생성 후 WebDAV 음성 전사 자막도 번역합니다.";
     }
 
     public void ShowEmptyState()
     {
+        CancelGeminiTranslation();
+        CancelTranscriptionDownload();
+        try { if (_captionProcess is { HasExited: false }) _captionProcess.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+        _localVideoPath = null;
+        _webDavTranscriptionLoader = null;
+        CleanupStagedWebDavSource();
         if (PlatformWebView.CoreWebView2 is not null) PlatformWebView.CoreWebView2.Navigate("about:blank");
         _platformPageMode = false;
         PlatformContainer.Visibility = Visibility.Collapsed;
@@ -138,6 +160,9 @@ public partial class PlayerWindow : Window
     public async void ShowPlatformPage(Uri uri, string title)
     {
         _localVideoPath = null;
+        _webDavTranscriptionLoader = null;
+        CancelTranscriptionDownload();
+        CleanupStagedWebDavSource();
         _captionCues.Clear();
         StopCaptionVoice();
         _platformPageMode = true;
@@ -447,13 +472,25 @@ public partial class PlayerWindow : Window
         cancellation.Dispose();
     }
 
+    private void CancelTranscriptionDownload()
+    {
+        var cancellation = _transcriptionDownloadCancellation;
+        _transcriptionDownloadCancellation = null;
+        if (cancellation is null) return;
+        try { cancellation.Cancel(); } catch (ObjectDisposedException) { }
+        cancellation.Dispose();
+    }
+
+    private void CleanupStagedWebDavSource()
+    {
+        var directory = _stagedWebDavSourceDirectory;
+        _stagedWebDavSourceDirectory = null;
+        if (directory is null) return;
+        try { Directory.Delete(directory, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+    }
+
     private async void GenerateCaption_Click(object sender, RoutedEventArgs e)
     {
-        if (_localVideoPath is null || !File.Exists(_localVideoPath))
-        {
-            MessageBox.Show(this, "CC 생성은 현재 PC에 저장된 영상에서 사용할 수 있습니다.", "CC 생성", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
         var runtimeDir = Path.Combine(AppContext.BaseDirectory, "Tools", "cc-runtime");
         var executable = Path.Combine(runtimeDir, "ohmyplayer-cc.exe");
         var model = Path.Combine(runtimeDir, "small.pt");
@@ -462,7 +499,55 @@ public partial class PlayerWindow : Window
             MessageBox.Show(this, "내장 자막 생성 파일을 찾을 수 없습니다. 설치 파일을 다시 실행하세요.", "CC 생성", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
+        var transcriptionLoader = _webDavTranscriptionLoader;
         var path = _localVideoPath;
+        string? stagedWebDavDirectoryForThisRun = null;
+        if ((path is null || !File.Exists(path)) && transcriptionLoader is not null)
+        {
+            var answer = MessageBox.Show(this,
+                "음성 전사를 위해 WebDAV 영상 전체를 임시 폴더에 내려받습니다. 영상 크기만큼의 여유 공간과 네트워크 시간이 필요합니다. 계속할까요?",
+                "WebDAV 음성 전사", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (answer != MessageBoxResult.Yes) return;
+            var extension = _webDavTranscriptionExtension;
+            var stagedDir = Path.Combine(Path.GetTempPath(), "ohmyplayer-cc", "webdav-" + Guid.NewGuid().ToString("N"));
+            stagedWebDavDirectoryForThisRun = stagedDir;
+            Directory.CreateDirectory(stagedDir);
+            path = Path.Combine(stagedDir, "source" + extension);
+            _transcriptionDownloadCancellation = new CancellationTokenSource();
+            var resumePlayback = _player.IsPlaying;
+            var mediaBeforeDownload = _player.Media;
+            if (resumePlayback) _player.Pause();
+            GenerateCaptionButton.IsEnabled = false;
+            GenerateCaptionButton.Content = "WebDAV 영상 준비 중…";
+            try
+            {
+                await transcriptionLoader(path, _transcriptionDownloadCancellation.Token);
+                if (_closed || !ReferenceEquals(transcriptionLoader, _webDavTranscriptionLoader))
+                {
+                    try { Directory.Delete(stagedDir, recursive: true); } catch (IOException) { }
+                    return;
+                }
+                _localVideoPath = path;
+                _stagedWebDavSourceDirectory = stagedDir;
+            }
+            catch (Exception ex) when (ex is IOException or HttpRequestException or InvalidOperationException or OperationCanceledException)
+            {
+                try { Directory.Delete(stagedDir, recursive: true); } catch (IOException) { }
+                if (!_closed && resumePlayback && ReferenceEquals(_player.Media, mediaBeforeDownload)) _player.Play();
+                if (!_closed && ex is not OperationCanceledException) MessageBox.Show(this, $"WebDAV 영상을 전사용으로 준비하지 못했습니다. 저장소 접근 권한과 여유 공간을 확인하세요.\n\n{ex.Message}", "전사 준비 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            finally
+            {
+                CancelTranscriptionDownload();
+                if (!_closed) { GenerateCaptionButton.IsEnabled = true; GenerateCaptionButton.Content = "CC 생성"; }
+            }
+        }
+        if (path is null || !File.Exists(path))
+        {
+            MessageBox.Show(this, "CC 생성은 현재 PC에 저장된 영상에서 사용할 수 있습니다.", "CC 생성", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
         if (_player.IsPlaying) _player.Pause();
         var outputDir = Path.Combine(Path.GetTempPath(), "ohmyplayer-cc", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(outputDir);
@@ -497,7 +582,21 @@ public partial class PlayerWindow : Window
         {
             if (!_closed) MessageBox.Show(this, $"CC 생성에 실패했습니다. 영상을 다시 재생하거나 다른 파일을 선택해 주세요.\n\n{ex.Message}", "CC 생성 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-        finally { _captionProcess?.Dispose(); _captionProcess = null; if (!_closed) { GenerateCaptionButton.IsEnabled = true; GenerateCaptionButton.Content = "CC 생성"; } }
+        finally
+        {
+            _captionProcess?.Dispose();
+            _captionProcess = null;
+            if (stagedWebDavDirectoryForThisRun is not null)
+            {
+                if (string.Equals(_stagedWebDavSourceDirectory, stagedWebDavDirectoryForThisRun, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.Equals(_localVideoPath, Path.Combine(stagedWebDavDirectoryForThisRun, "source" + _webDavTranscriptionExtension), StringComparison.OrdinalIgnoreCase)) _localVideoPath = null;
+                    CleanupStagedWebDavSource();
+                }
+                else try { Directory.Delete(stagedWebDavDirectoryForThisRun, recursive: true); } catch (IOException) { }
+            }
+            if (!_closed) { GenerateCaptionButton.IsEnabled = true; GenerateCaptionButton.Content = "CC 생성"; }
+        }
     }
     private void LoadCaptionCues(string path)
     {

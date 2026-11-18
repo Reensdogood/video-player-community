@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.IO;
 using System.Windows;
@@ -19,6 +20,7 @@ public sealed record LocalModel(string Name, string Family, string ParameterSize
 public partial class SettingsWindow : Window
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(3) };
+    private static readonly HttpClient ModelPullHttp = new() { Timeout = TimeSpan.FromHours(4) };
     private readonly ObservableCollection<LocalModel> _models = [];
     private readonly SavedSettings _settings;
     private readonly CloudMediaClient _cloudClient = new();
@@ -268,7 +270,9 @@ public partial class SettingsWindow : Window
         StorageStatus.Text = "저장된 연결을 삭제했습니다.";
     }
 
-    private async void RefreshModels_Click(object sender, RoutedEventArgs e)
+    private async void RefreshModels_Click(object sender, RoutedEventArgs e) => await RefreshModelsAsync();
+
+    private async Task RefreshModelsAsync(string? selectModel = null)
     {
         if (!Uri.TryCreate(OllamaUrlBox.Text.Trim().TrimEnd('/') + "/api/tags", UriKind.Absolute, out var uri)) { ModelStatus.Text = "서버 주소가 올바르지 않습니다."; return; }
         _settings.LocalModelEndpoint = OllamaUrlBox.Text.Trim().TrimEnd('/');
@@ -289,6 +293,7 @@ public partial class SettingsWindow : Window
                 }
             }
             ModelStatus.Text = _models.Count == 0 ? "설치된 모델이 없습니다." : $"{_models.Count}개 모델을 찾았습니다. 번역 기능 지원 여부는 개별 검증이 필요합니다.";
+            if (!string.IsNullOrWhiteSpace(selectModel)) _selectedModel = _models.FirstOrDefault(m => m.Name.Equals(selectModel, StringComparison.OrdinalIgnoreCase))?.Name ?? _selectedModel;
             if (_selectedModel is not null) ModelList.SelectedItem = _models.FirstOrDefault(m => m.Name == _selectedModel);
             if (_models.Count == 0) ModelDetails.Text = "Ollama에 설치된 모델이 없습니다.";
         }
@@ -298,11 +303,62 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private async void InstallRecommendedTranslationModel_Click(object sender, RoutedEventArgs e)
+    {
+        var modelName = (sender as Button)?.Tag?.ToString() ?? "translategemma:12b";
+        var modelSizeLabel = modelName.Split(':').Last().ToUpperInvariant();
+        var modelSize = modelName.EndsWith(":4b", StringComparison.OrdinalIgnoreCase) ? "3.3" : "8.1";
+        var endpoint = OllamaUrlBox.Text.Trim().TrimEnd('/');
+        if (!Uri.TryCreate(endpoint + "/api/pull", UriKind.Absolute, out var uri)) { ModelStatus.Text = "Ollama 서버 주소를 확인해 주세요."; return; }
+        var button = sender as Button;
+        if (button is not null) button.IsEnabled = false;
+        ModelStatus.Text = $"TranslateGemma {modelSizeLabel} 모델을 받는 중… 약 {modelSize}GB가 필요합니다.";
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, uri)
+            {
+                Content = JsonContent.Create(new { name = modelName, stream = true })
+            };
+            using var response = await ModelPullHttp.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
+            while (await reader.ReadLineAsync() is { Length: > 0 } line)
+            {
+                using var json = JsonDocument.Parse(line);
+                var root = json.RootElement;
+                if (root.TryGetProperty("error", out var error)) throw new InvalidOperationException(error.GetString() ?? "Ollama에서 모델을 받지 못했습니다.");
+                var status = root.TryGetProperty("status", out var statusNode) ? statusNode.GetString() : "다운로드 중…";
+                if (root.TryGetProperty("total", out var totalNode) && totalNode.TryGetInt64(out var total) && total > 0
+                    && root.TryGetProperty("completed", out var completedNode) && completedNode.TryGetInt64(out var completed))
+                    ModelStatus.Text = $"TranslateGemma {modelSizeLabel} {status} · {completed / 1_000_000_000d:0.0}/{total / 1_000_000_000d:0.0}GB";
+                else ModelStatus.Text = $"TranslateGemma {modelSizeLabel} {status}";
+            }
+            _settings.LocalModelEndpoint = endpoint;
+            await RefreshModelsAsync(modelName);
+            if (_models.FirstOrDefault(model => model.Name.StartsWith(modelName, StringComparison.OrdinalIgnoreCase)) is { } installed)
+            {
+                _selectedModel = installed.Name;
+                ModelList.SelectedItem = installed;
+                SaveSettings();
+                ModelStatus.Text = $"TranslateGemma {modelSizeLabel} 설치 완료 · 선택했습니다. 번역 사용 여부와 대상 언어를 아래에서 저장하세요.";
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or JsonException or InvalidOperationException)
+        {
+            ModelStatus.Text = $"모델을 설치하지 못했습니다. Ollama 실행 상태와 저장 공간을 확인하세요. {ex.Message}";
+        }
+        finally { if (button is not null) button.IsEnabled = true; }
+    }
+
     private void ModelList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ModelList.SelectedItem is not LocalModel model) return;
         _selectedModel = model.Name;
-        ModelDetails.Text = $"이름: {model.Name}\n계열: {Empty(model.Family)}\n파라미터: {Empty(model.ParameterSize)}\n양자화: {Empty(model.Quantization)}\n\n연결 기능: 선택한 모델을 Ollama /api/chat으로 호출해 SRT/VTT 자막을 번역합니다.\n미확인: 번역 품질, 속도, PC 성능은 이 모델 메타데이터만으로 보장할 수 없습니다. 음성 전사는 Whisper CC 생성, 음성 읽기는 Windows 음성 기능을 사용합니다.";
+        var translationNote = model.Name.StartsWith("translategemma", StringComparison.OrdinalIgnoreCase)
+            ? "번역 특화 모델입니다. Ollama 라이브러리 기준 4B는 약 3.3GB, 12B는 약 8.1GB이며 한국어를 포함한 55개 언어를 지원한다고 안내합니다."
+            : "모델이 번역에 적합한지 Ollama 메타데이터만으로는 확인할 수 없으므로 결과를 확인하세요.";
+        ModelDetails.Text = $"이름: {model.Name}\n계열: {Empty(model.Family)}\n파라미터: {Empty(model.ParameterSize)}\n양자화: {Empty(model.Quantization)}\n\n연결 기능: 선택한 모델을 Ollama /api/chat으로 호출해 SRT/VTT 자막을 번역합니다.\n{translationNote}\n미확인: 실제 번역 품질과 속도는 PC 성능 및 자막 내용에 따라 달라집니다. 음성 전사는 Whisper CC 생성, 음성 읽기는 Windows 음성 기능을 사용합니다.";
         SaveSettings();
     }
 

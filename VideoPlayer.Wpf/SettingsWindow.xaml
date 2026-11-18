@@ -195,7 +195,12 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                                 <TextBlock Text="로컬 모델" Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="Ollama에 설치한 텍스트 모델을 SRT/VTT 자막 번역에 연결할 수 있습니다. 음성 전사는 아래 CC 생성을 담당하는 내장 Whisper가 처리합니다. 영상과 음성은 Ollama 번역 서버로 보내지 않습니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,18"/>
+                                <TextBlock Text="Ollama에 설치한 텍스트 모델을 SRT/VTT 자막 번역에 연결할 수 있습니다. 추천 번역 모델은 TranslateGemma 12B이며, 약 8.1GB를 내려받습니다. 메모리가 적은 PC는 4B(약 3.3GB)를 고려하세요. 음성 전사는 내장 Whisper가 처리합니다. 영상과 음성은 Ollama 번역 서버로 보내지 않습니다." TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,12"/>
+                                <DockPanel LastChildFill="False" Margin="0,0,0,14">
+                                    <TextBlock Text="TranslateGemma · 번역 특화 · 한국어 포함 55개 언어" Foreground="{StaticResource Ink}" VerticalAlignment="Center"/>
+                                    <Button DockPanel.Dock="Right" Tag="translategemma:12b" Content="추천 모델 설치 · 12B" Style="{StaticResource PrimaryButton}" Click="InstallRecommendedTranslationModel_Click"/>
+                                    <Button DockPanel.Dock="Right" Tag="translategemma:4b" Content="저사양 모델 · 4B" Margin="0,0,8,0" Click="InstallRecommendedTranslationModel_Click"/>
+                                </DockPanel>
                                 <Border Background="{StaticResource GlassStrong}" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,0,14">
                                     <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="270"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="서버 주소" Style="{StaticResource FieldLabel}" Margin="0,0,12,0"/>

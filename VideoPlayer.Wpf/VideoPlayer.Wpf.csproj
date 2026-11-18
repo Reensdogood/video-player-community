@@ -6,7 +6,7 @@
     <Product>다봐 (ohmyplayer)</Product>
     <ApplicationIcon>Assets\ohmyplayer.ico</ApplicationIcon>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <Version>0.1.17</Version>
+    <Version>0.1.18</Version>
     <StartupObject>VideoPlayer.Wpf.App</StartupObject>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

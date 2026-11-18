@@ -269,7 +269,12 @@ public partial class MainWindow : Window
             }
         }
         ShowPlayerWindow();
-        _playerWindow?.SetNowPlaying(item.Title, _preferAutoSubtitle, item.IsRemote ? null : item.Mrl, translationSubtitlePath);
+        Func<string, CancellationToken, Task>? transcriptionLoader = null;
+        if (item.UseWebDavProxy && _webDavPlaybackProxy is { } playbackProxy) transcriptionLoader = playbackProxy.DownloadToFileAsync;
+        var transcriptionExtension = item.UseWebDavProxy && Uri.TryCreate(item.Mrl, UriKind.Absolute, out var sourceUri)
+            ? Path.GetExtension(sourceUri.AbsolutePath)
+            : ".mp4";
+        _playerWindow?.SetNowPlaying(item.Title, _preferAutoSubtitle, item.IsRemote ? null : item.Mrl, translationSubtitlePath, transcriptionLoader, transcriptionExtension);
         // Show the WPF VideoView before starting LibVLC. Starting playback first can make
         // LibVLC create its own native video window, leaving the in-window controls blank.
         _player.Play(media);

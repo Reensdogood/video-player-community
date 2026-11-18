@@ -23,6 +23,28 @@ public sealed class WebDavPlaybackProxy : IDisposable
     public string LocalMediaUri { get; }
     public string? LastError { get; private set; }
 
+    public async Task DownloadToFileAsync(string destinationPath, CancellationToken cancellationToken = default)
+    {
+        var destination = Path.GetFullPath(destinationPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        var temporary = destination + ".partial";
+        try
+        {
+            using var response = await _http.GetAsync(_remoteUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using var target = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, useAsync: true);
+            await source.CopyToAsync(target, 1024 * 1024, cancellationToken);
+            await target.FlushAsync(cancellationToken);
+            File.Move(temporary, destination, overwrite: true);
+        }
+        catch
+        {
+            try { if (File.Exists(temporary)) File.Delete(temporary); } catch (IOException) { }
+            throw;
+        }
+    }
+
     public WebDavPlaybackProxy(Uri remoteUri, string? username, string? password)
     {
         _remoteUri = remoteUri;
