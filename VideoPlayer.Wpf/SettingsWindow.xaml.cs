@@ -33,6 +33,10 @@ public partial class SettingsWindow : Window
         _selectedModel = _settings.SelectedLocalModel;
         StorageList.ItemsSource = _settings.StorageConnections;
         GeminiTranslationEnabledBox.IsChecked = _settings.GeminiTranslationEnabled;
+        LocalTranslationEnabledBox.IsChecked = _settings.LocalTranslationEnabled;
+        LocalTargetLanguageBox.SelectedItem = LocalTargetLanguageBox.Items.Cast<ComboBoxItem>().FirstOrDefault(item => item.Tag?.ToString() == _settings.LocalTranslationTargetLanguage) ?? LocalTargetLanguageBox.Items[0];
+        OllamaUrlBox.Text = string.IsNullOrWhiteSpace(_settings.LocalModelEndpoint) ? "http://localhost:11434" : _settings.LocalModelEndpoint;
+        LocalTranslationStatus.Text = _settings.LocalTranslationEnabled ? "저장됨 · 선택한 Ollama 모델로 다음 자막을 번역합니다." : "모델을 선택한 뒤 설정을 저장하세요.";
         GeminiModelBox.Text = string.IsNullOrWhiteSpace(_settings.GeminiModel) ? "gemini-3.8-flash" : _settings.GeminiModel;
         GeminiTargetLanguageBox.SelectedItem = GeminiTargetLanguageBox.Items.Cast<ComboBoxItem>().FirstOrDefault(item => item.Tag?.ToString() == _settings.GeminiTargetLanguage) ?? GeminiTargetLanguageBox.Items[0];
         try
@@ -255,6 +259,7 @@ public partial class SettingsWindow : Window
     private async void RefreshModels_Click(object sender, RoutedEventArgs e)
     {
         if (!Uri.TryCreate(OllamaUrlBox.Text.Trim().TrimEnd('/') + "/api/tags", UriKind.Absolute, out var uri)) { ModelStatus.Text = "서버 주소가 올바르지 않습니다."; return; }
+        _settings.LocalModelEndpoint = OllamaUrlBox.Text.Trim().TrimEnd('/');
         ModelStatus.Text = "Ollama 모델 목록 확인 중…";
         try
         {
@@ -285,7 +290,7 @@ public partial class SettingsWindow : Window
     {
         if (ModelList.SelectedItem is not LocalModel model) return;
         _selectedModel = model.Name;
-        ModelDetails.Text = $"이름: {model.Name}\n계열: {Empty(model.Family)}\n파라미터: {Empty(model.ParameterSize)}\n양자화: {Empty(model.Quantization)}\n\n확인된 범위: Ollama가 반환한 모델 설치 및 메타데이터.\n미확인: 한국어 번역 품질, 자막 번역 성능, 영상/오디오 인식(ASR), 음성 생성(TTS), GPU/메모리 성능. 현재 PoC에서는 실제 번역 또는 TTS에 연결되지 않습니다.";
+        ModelDetails.Text = $"이름: {model.Name}\n계열: {Empty(model.Family)}\n파라미터: {Empty(model.ParameterSize)}\n양자화: {Empty(model.Quantization)}\n\n연결 기능: 선택한 모델을 Ollama /api/chat으로 호출해 SRT/VTT 자막을 번역합니다.\n미확인: 번역 품질, 속도, PC 성능은 이 모델 메타데이터만으로 보장할 수 없습니다. 음성 전사는 Whisper CC 생성, 음성 읽기는 Windows 음성 기능을 사용합니다.";
         SaveSettings();
     }
 
@@ -322,6 +327,12 @@ public partial class SettingsWindow : Window
         try
         {
             _settings.GeminiTranslationEnabled = GeminiTranslationEnabledBox.IsChecked == true;
+            if (_settings.GeminiTranslationEnabled)
+            {
+                _settings.LocalTranslationEnabled = false;
+                LocalTranslationEnabledBox.IsChecked = false;
+                LocalTranslationStatus.Text = "Gemini 번역을 선택했습니다.";
+            }
             _settings.GeminiModel = GeminiModelBox.Text.Trim();
             _settings.GeminiTargetLanguage = (GeminiTargetLanguageBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "한국어";
             if (!string.IsNullOrWhiteSpace(GeminiApiKeyBox.Password)) _settings.ProtectedGeminiApiKey = UserSecret.Protect(GeminiApiKeyBox.Password);
@@ -335,6 +346,58 @@ public partial class SettingsWindow : Window
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
         {
             GeminiStatusText.Text = ex.Message;
+        }
+    }
+
+    private void SaveLocalTranslation_Click(object sender, RoutedEventArgs e)
+    {
+        var endpoint = OllamaUrlBox.Text.Trim().TrimEnd('/');
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+        {
+            LocalTranslationStatus.Text = "Ollama 서버 주소를 확인해 주세요.";
+            return;
+        }
+        if (LocalTranslationEnabledBox.IsChecked == true && string.IsNullOrWhiteSpace(_selectedModel))
+        {
+            LocalTranslationStatus.Text = "번역에 사용할 Ollama 모델을 먼저 선택해 주세요.";
+            return;
+        }
+        _settings.LocalModelEndpoint = endpoint;
+        _settings.LocalTranslationEnabled = LocalTranslationEnabledBox.IsChecked == true;
+        _settings.LocalTranslationTargetLanguage = (LocalTargetLanguageBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "한국어";
+        if (_settings.LocalTranslationEnabled)
+        {
+            _settings.GeminiTranslationEnabled = false;
+            GeminiTranslationEnabledBox.IsChecked = false;
+            GeminiStatusText.Text = "로컬 Ollama 번역을 선택했습니다.";
+        }
+        try
+        {
+            AppSettingsStore.Save(_settings);
+            LocalTranslationStatus.Text = _settings.LocalTranslationEnabled ? $"저장됨 · {_selectedModel} 모델로 다음 자막을 번역합니다." : "저장됨 · 로컬 자동 번역을 껐습니다.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LocalTranslationStatus.Text = $"설정을 저장하지 못했습니다: {ex.Message}";
+        }
+    }
+
+    private async void TestLocalTranslation_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_selectedModel)) { LocalTranslationStatus.Text = "먼저 Ollama 모델을 선택해 주세요."; return; }
+        var endpoint = OllamaUrlBox.Text.Trim().TrimEnd('/');
+        if (!Uri.TryCreate(endpoint + "/api/chat", UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+        { LocalTranslationStatus.Text = "Ollama 서버 주소를 확인해 주세요."; return; }
+        LocalTranslationStatus.Text = "Ollama 모델에 짧은 문장을 보내 연결을 확인하는 중…";
+        try
+        {
+            var language = (LocalTargetLanguageBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "한국어";
+            var result = await new LocalSubtitleTranslator().TranslateTextsAsync(["The train leaves in five minutes."], uri, _selectedModel, language);
+            LocalTranslationStatus.Text = $"연결 성공 · 번역 예시: {result[0]}";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException or JsonException)
+        {
+            LocalTranslationStatus.Text = $"연결 확인 실패 · {ex.Message}";
         }
     }
 
@@ -377,6 +440,7 @@ public partial class SettingsWindow : Window
     private void SaveSettings()
     {
         _settings.SelectedLocalModel = _selectedModel;
+        _settings.LocalModelEndpoint = OllamaUrlBox.Text.Trim().TrimEnd('/');
         try { AppSettingsStore.Save(_settings); }
         catch (IOException ex) { ModelStatus.Text = $"선택을 저장하지 못했습니다: {ex.Message}"; }
         catch (UnauthorizedAccessException) { ModelStatus.Text = "Windows 사용자 설정 폴더에 저장 권한이 없습니다."; }

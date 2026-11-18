@@ -55,7 +55,11 @@ public partial class MainWindow : Window
             if (_currentIndex >= 0 && _currentIndex + 1 < _playlist.Count) PlayAt(_currentIndex + 1);
             else _playerWindow?.MarkPlaybackEnded();
         });
-        _player.EncounteredError += (_, _) => Dispatcher.BeginInvoke(() => MessageBox.Show(this, "미디어를 열 수 없습니다. URL이 직접 재생 가능한 미디어 주소인지, 네트워크 접근이 가능한지 확인하세요.", "재생 오류", MessageBoxButton.OK, MessageBoxImage.Warning));
+        _player.EncounteredError += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            if (!IsLoaded) return;
+            _playerWindow?.ShowPlaybackError("미디어를 열지 못했습니다. 파일 접근 권한, URL 또는 네트워크 연결을 확인하세요. 창을 닫거나 다른 파일을 다시 선택할 수 있습니다.");
+        });
         Closed += (_, _) =>
         {
             _playerWindow?.Close();

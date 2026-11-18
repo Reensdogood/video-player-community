@@ -46,6 +46,9 @@ public sealed class CloudAccount
 public sealed class SavedSettings
 {
     public string? SelectedLocalModel { get; set; }
+    public string LocalModelEndpoint { get; set; } = "http://localhost:11434";
+    public bool LocalTranslationEnabled { get; set; }
+    public string LocalTranslationTargetLanguage { get; set; } = "한국어";
     public string? CaptureFolder { get; set; }
     public string SubtitleFontFamily { get; set; } = "Segoe UI";
     public int SubtitleFontSize { get; set; } = 28;
