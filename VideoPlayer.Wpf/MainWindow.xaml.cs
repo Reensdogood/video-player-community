@@ -375,10 +375,17 @@ public partial class MainWindow : Window
         PikPakSourceButton.Content = FindPikPakConnection() is null ? "PikPak · 설정 필요" : "PikPak · 연결됨";
     }
 
-    private StorageConnection? FindPikPakConnection() => _settings.StorageConnections.FirstOrDefault(connection =>
-        connection.Kind == StorageKind.WebDav &&
-        (connection.Name.Contains("PikPak", StringComparison.OrdinalIgnoreCase)
-         || Uri.TryCreate(connection.Endpoint, UriKind.Absolute, out var uri) && uri.Host.Equals("dav.mypikpak.com", StringComparison.OrdinalIgnoreCase)));
+    private StorageConnection? FindPikPakConnection() => _settings.StorageConnections
+        .Where(IsPikPakConnection)
+        .OrderByDescending(IsPikPakEndpoint)
+        .FirstOrDefault();
+
+    private static bool IsPikPakConnection(StorageConnection connection) => connection.Kind == StorageKind.WebDav
+        && (connection.Name.Contains("PikPak", StringComparison.OrdinalIgnoreCase) || IsPikPakEndpoint(connection));
+
+    private static bool IsPikPakEndpoint(StorageConnection connection) =>
+        Uri.TryCreate(connection.Endpoint, UriKind.Absolute, out var uri)
+        && uri.Host.Equals("dav.mypikpak.com", StringComparison.OrdinalIgnoreCase);
 
     private string CloudStatus(CloudProviderKind provider) => _settings.CloudAccounts.Any(item => item.Provider == provider)
         || _settings.StorageConnections.Any(item => item.Kind == StorageKind.LocalFolder && item.CloudProvider == provider)
@@ -387,7 +394,7 @@ public partial class MainWindow : Window
     private void RefreshStorageSources()
     {
         StorageSourceButtons.Children.Clear();
-        foreach (var connection in _settings.StorageConnections.Where(connection => connection.Kind != StorageKind.LocalFolder))
+        foreach (var connection in _settings.StorageConnections.Where(connection => connection.Kind != StorageKind.LocalFolder && !IsPikPakConnection(connection)))
         {
             var button = new Button
             {
