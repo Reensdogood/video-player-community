@@ -4,13 +4,14 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace VideoPlayer.Wpf;
 
-public sealed record PlaylistItem(string Mrl, string Title, bool IsRemote, string? Username = null, string? Password = null, string? PlaybackUri = null, string? LocationLabel = null, bool IsPlatformPage = false)
+public sealed record PlaylistItem(string Mrl, string Title, bool IsRemote, string? Username = null, string? Password = null, string? PlaybackUri = null, string? LocationLabel = null, bool IsPlatformPage = false, bool UseWebDavProxy = false)
 {
     public string DisplayLocation => LocationLabel ?? Mrl;
 }
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
     private readonly Stack<string> _cloudPathHistory = new();
     private readonly SavedSettings _settings;
     private PlayerWindow? _playerWindow;
+    private WebDavPlaybackProxy? _webDavPlaybackProxy;
     private bool _preferAutoSubtitle;
     private int _currentIndex = -1;
     private StorageConnection? _activeStorage;
@@ -58,12 +60,17 @@ public partial class MainWindow : Window
         _player.EncounteredError += (_, _) => Dispatcher.BeginInvoke(() =>
         {
             if (!IsLoaded) return;
-            _playerWindow?.ShowPlaybackError("미디어를 열지 못했습니다. 파일 접근 권한, URL 또는 네트워크 연결을 확인하세요. 창을 닫거나 다른 파일을 다시 선택할 수 있습니다.");
+            var detail = _webDavPlaybackProxy?.LastError;
+            _playerWindow?.ShowPlaybackError(string.IsNullOrWhiteSpace(detail)
+                ? "미디어를 열지 못했습니다. 파일 접근 권한, URL 또는 네트워크 연결을 확인하세요. 창을 닫거나 다른 파일을 다시 선택할 수 있습니다."
+                : $"WebDAV 재생 오류 · {detail}");
         });
         Closed += (_, _) =>
         {
             _playerWindow?.Close();
             _player.Stop();
+            _webDavPlaybackProxy?.Dispose();
+            _webDavPlaybackProxy = null;
             _player.Dispose();
             _libVlc.Dispose();
         };
@@ -219,9 +226,28 @@ public partial class MainWindow : Window
             _playerWindow?.ShowPlatformPage(new Uri(item.Mrl), item.Title);
             return;
         }
+        if (_webDavPlaybackProxy is not null)
+        {
+            _player.Stop();
+            _webDavPlaybackProxy.Dispose();
+            _webDavPlaybackProxy = null;
+        }
         var mediaUri = item.PlaybackUri ?? item.Mrl;
+        if (item.UseWebDavProxy)
+        {
+            try
+            {
+                _webDavPlaybackProxy = new WebDavPlaybackProxy(new Uri(mediaUri), item.Username, item.Password);
+                mediaUri = _webDavPlaybackProxy.LocalMediaUri;
+            }
+            catch (Exception ex) when (ex is SocketException or InvalidOperationException or IOException)
+            {
+                CloudStatusText.Text = $"WebDAV 영상 연결을 준비하지 못했습니다: {ex.Message}";
+                return;
+            }
+        }
         using var media = item.IsRemote ? new Media(_libVlc, new Uri(mediaUri)) : new Media(_libVlc, mediaUri, FromType.FromPath);
-        if (item.IsRemote && !string.IsNullOrWhiteSpace(item.Username))
+        if (item.IsRemote && !item.UseWebDavProxy && !string.IsNullOrWhiteSpace(item.Username))
         {
             media.AddOption($":http-user={item.Username}");
             media.AddOption($":http-pwd={item.Password ?? ""}");
@@ -261,7 +287,13 @@ public partial class MainWindow : Window
     }
     private void Next() { if (_playlist.Count > 0) PlayAt((_currentIndex + 1) % _playlist.Count); }
     private void Previous() { if (_playlist.Count > 0) PlayAt((_currentIndex - 1 + _playlist.Count) % _playlist.Count); }
-    private void StopPlayback() { _player.Stop(); _playerWindow?.ShowEmptyState(); }
+    private void StopPlayback()
+    {
+        _player.Stop();
+        _webDavPlaybackProxy?.Dispose();
+        _webDavPlaybackProxy = null;
+        _playerWindow?.ShowEmptyState();
+    }
 
     private void Window_DragOver(object sender, DragEventArgs e) => e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
     private void Window_Drop(object sender, DragEventArgs e)
@@ -385,7 +417,8 @@ public partial class MainWindow : Window
 
     private static bool IsPikPakEndpoint(StorageConnection connection) =>
         Uri.TryCreate(connection.Endpoint, UriKind.Absolute, out var uri)
-        && uri.Host.Equals("dav.mypikpak.com", StringComparison.OrdinalIgnoreCase);
+        && (uri.Host.Equals("dav.mypikpak.com", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.Equals("dav.pikpak.ai", StringComparison.OrdinalIgnoreCase));
 
     private string CloudStatus(CloudProviderKind provider) => _settings.CloudAccounts.Any(item => item.Provider == provider)
         || _settings.StorageConnections.Any(item => item.Kind == StorageKind.LocalFolder && item.CloudProvider == provider)
@@ -550,7 +583,8 @@ public partial class MainWindow : Window
         var item = new PlaylistItem(entry.Path, entry.Name, isWebDav,
             isWebDav ? _activeStorage.Username : null,
             isWebDav ? UserSecret.Unprotect(_activeStorage.ProtectedPassword) : null,
-            LocationLabel: $"{_activeStorage.Name} · {entry.Path}");
+            LocationLabel: $"{_activeStorage.Name} · {entry.Name}",
+            UseWebDavProxy: isWebDav);
         AddItems([item], playNow: true);
         CloudFilesList.SelectedIndex = -1;
     }
@@ -560,7 +594,13 @@ public partial class MainWindow : Window
         if (_playerWindow is null)
         {
             _playerWindow = new PlayerWindow(_player, Previous, Next, StopPlayback, OpenFilesFromPlayer) { Owner = this };
-            _playerWindow.Closed += (_, _) => { _playerWindow = null; _currentIndex = -1; };
+            _playerWindow.Closed += (_, _) =>
+            {
+                _playerWindow = null;
+                _currentIndex = -1;
+                _webDavPlaybackProxy?.Dispose();
+                _webDavPlaybackProxy = null;
+            };
         }
         if (!_playerWindow.IsVisible) _playerWindow.Show();
         _playerWindow.Activate();

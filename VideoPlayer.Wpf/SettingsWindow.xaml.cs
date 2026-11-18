@@ -66,8 +66,8 @@ public partial class SettingsWindow : Window
         SelectStorageTab();
         StorageKindBox.SelectedIndex = 1;
         StorageNameBox.Text = "PikPak";
-        StorageEndpointBox.Text = "https://dav.mypikpak.com";
-        StorageStatus.Text = "PikPak WebDAV 사용자 이름과 비밀번호를 입력한 뒤 ‘연결 확인 후 저장’을 누르세요. 저장되면 메인 메뉴에서 목록이 열립니다.";
+        StorageEndpointBox.Text = "https://dav.pikpak.ai";
+        StorageStatus.Text = "PikPak 설정에 표시된 WebDAV 서버 주소·사용자 이름·비밀번호를 확인한 뒤 ‘연결 확인 후 저장’을 누르세요. 저장되면 메인 메뉴에서 목록이 열립니다.";
     }
 
     private void CaptureFolder_Click(object sender, RoutedEventArgs e)
@@ -226,7 +226,8 @@ public partial class SettingsWindow : Window
             var endpoint = StorageEndpointBox.Text.Trim();
             var name = StorageNameBox.Text.Trim();
             var isPikPakEndpoint = kind == StorageKind.WebDav && Uri.TryCreate(endpoint, UriKind.Absolute, out var webDavUri)
-                && webDavUri.Host.Equals("dav.mypikpak.com", StringComparison.OrdinalIgnoreCase);
+                && (webDavUri.Host.Equals("dav.mypikpak.com", StringComparison.OrdinalIgnoreCase)
+                    || webDavUri.Host.Equals("dav.pikpak.ai", StringComparison.OrdinalIgnoreCase));
             if (string.IsNullOrWhiteSpace(name)) name = isPikPakEndpoint ? "PikPak" : kind == StorageKind.Smb ? "SMB 공유" : "WebDAV";
             if (isPikPakEndpoint && name.Equals("WebDAV", StringComparison.OrdinalIgnoreCase)) name = "PikPak";
             if (kind == StorageKind.Smb && !endpoint.StartsWith("\\\\", StringComparison.Ordinal)) throw new InvalidOperationException("SMB 경로는 \\\\서버\\공유 형식으로 입력하세요.");
