@@ -302,13 +302,14 @@ public partial class MainWindow : Window
         if (sender is not Button { Tag: string provider }) return;
         if (provider == "PikPak")
         {
-            var pikpak = _settings.StorageConnections.FirstOrDefault(connection => connection.Kind == StorageKind.WebDav && connection.Name.Contains("PikPak", StringComparison.OrdinalIgnoreCase));
+            var pikpak = FindPikPakConnection();
             if (pikpak is not null) { await OpenStorageAsync(pikpak); return; }
-            LocalContent.Visibility = Visibility.Collapsed;
-            CloudContent.Visibility = Visibility.Visible;
-            CloudTitle.Text = "PikPak";
-            CloudFilesList.ItemsSource = null;
-            CloudStatusText.Text = "PikPak Premium 설정에서 WebDAV를 켜고 전용 자격 증명을 만든 뒤 ‘저장소 연결’에서 WebDAV 주소를 추가하세요.";
+            var settings = new SettingsWindow { Owner = this };
+            settings.PreparePikPakConnection();
+            settings.ShowDialog();
+            ReloadConnections();
+            pikpak = FindPikPakConnection();
+            if (pikpak is not null) await OpenStorageAsync(pikpak);
             return;
         }
         _activeStorage = null;
@@ -371,7 +372,13 @@ public partial class MainWindow : Window
         OneDriveSourceButton.Content = $"OneDrive · {CloudStatus(CloudProviderKind.OneDrive)}";
         DropboxSourceButton.Content = $"Dropbox · {CloudStatus(CloudProviderKind.Dropbox)}";
         MyBoxSourceButton.Content = $"Naver MYBOX · {CloudStatus(CloudProviderKind.NaverMyBox)}";
+        PikPakSourceButton.Content = FindPikPakConnection() is null ? "PikPak · 설정 필요" : "PikPak · 연결됨";
     }
+
+    private StorageConnection? FindPikPakConnection() => _settings.StorageConnections.FirstOrDefault(connection =>
+        connection.Kind == StorageKind.WebDav &&
+        (connection.Name.Contains("PikPak", StringComparison.OrdinalIgnoreCase)
+         || Uri.TryCreate(connection.Endpoint, UriKind.Absolute, out var uri) && uri.Host.Equals("dav.mypikpak.com", StringComparison.OrdinalIgnoreCase)));
 
     private string CloudStatus(CloudProviderKind provider) => _settings.CloudAccounts.Any(item => item.Provider == provider)
         || _settings.StorageConnections.Any(item => item.Kind == StorageKind.LocalFolder && item.CloudProvider == provider)
@@ -478,7 +485,7 @@ public partial class MainWindow : Window
             var count = CloudFilesList.Items.Count;
             CloudStatusText.Text = count == 0 ? "재생 가능한 영상이나 하위 폴더가 없습니다." : $"{count}개 항목 · 폴더를 선택해 이동하고 영상을 선택해 재생합니다.";
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException or InvalidOperationException or System.Security.Cryptography.CryptographicException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException or InvalidOperationException or System.Xml.XmlException or System.Security.Cryptography.CryptographicException)
         {
             CloudStatusText.Text = $"목록을 불러오지 못했습니다: {ex.Message}";
         }

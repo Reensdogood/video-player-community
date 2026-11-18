@@ -61,6 +61,14 @@ public partial class SettingsWindow : Window
 
     public void SelectCloudTab() => SettingsTabs.SelectedIndex = 2;
     public void SelectStorageTab() => SettingsTabs.SelectedIndex = 3;
+    public void PreparePikPakConnection()
+    {
+        SelectStorageTab();
+        StorageKindBox.SelectedIndex = 1;
+        StorageNameBox.Text = "PikPak";
+        StorageEndpointBox.Text = "https://dav.mypikpak.com";
+        StorageStatus.Text = "PikPak WebDAV 사용자 이름과 비밀번호를 입력한 뒤 ‘연결 확인 후 저장’을 누르세요. 저장되면 메인 메뉴에서 목록이 열립니다.";
+    }
 
     private void CaptureFolder_Click(object sender, RoutedEventArgs e)
     {
@@ -217,7 +225,10 @@ public partial class SettingsWindow : Window
             var kind = StorageKindBox.SelectedIndex == 1 ? StorageKind.WebDav : StorageKind.Smb;
             var endpoint = StorageEndpointBox.Text.Trim();
             var name = StorageNameBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(name)) name = kind == StorageKind.Smb ? "SMB 공유" : "WebDAV";
+            var isPikPakEndpoint = kind == StorageKind.WebDav && Uri.TryCreate(endpoint, UriKind.Absolute, out var webDavUri)
+                && webDavUri.Host.Equals("dav.mypikpak.com", StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(name)) name = isPikPakEndpoint ? "PikPak" : kind == StorageKind.Smb ? "SMB 공유" : "WebDAV";
+            if (isPikPakEndpoint && name.Equals("WebDAV", StringComparison.OrdinalIgnoreCase)) name = "PikPak";
             if (kind == StorageKind.Smb && !endpoint.StartsWith("\\\\", StringComparison.Ordinal)) throw new InvalidOperationException("SMB 경로는 \\\\서버\\공유 형식으로 입력하세요.");
             if (kind == StorageKind.WebDav && (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))) throw new InvalidOperationException("WebDAV 주소는 http:// 또는 https:// 형식이어야 합니다.");
 
@@ -239,7 +250,7 @@ public partial class SettingsWindow : Window
             StoragePasswordBox.Clear();
             StorageStatus.Text = "연결을 확인하고 저장했습니다.";
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException or InvalidOperationException or UriFormatException or System.Security.Cryptography.CryptographicException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException or InvalidOperationException or UriFormatException or System.Xml.XmlException or System.Security.Cryptography.CryptographicException)
         {
             StorageStatus.Text = $"연결 실패: {ex.Message}";
         }

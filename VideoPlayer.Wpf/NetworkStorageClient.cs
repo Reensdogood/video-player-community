@@ -84,7 +84,7 @@ public sealed class NetworkStorageClient
         if (response.StatusCode != HttpStatusCode.MultiStatus && !response.IsSuccessStatusCode)
             throw new HttpRequestException($"WebDAV 응답 오류: {(int)response.StatusCode} {response.ReasonPhrase}");
         await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var xmlReader = XmlReader.Create(responseStream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
+        using var xmlReader = XmlReader.Create(responseStream, new XmlReaderSettings { Async = true, DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
         var document = await XDocument.LoadAsync(xmlReader, LoadOptions.None, cancellationToken);
         XNamespace dav = "DAV:";
         var entries = new List<StorageEntry>();

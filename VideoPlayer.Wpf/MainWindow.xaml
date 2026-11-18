@@ -38,7 +38,7 @@
                     <Button x:Name="MyBoxSourceButton" Content="Naver MYBOX" Tag="Naver MYBOX" Click="CloudSource_Click" HorizontalContentAlignment="Left" Margin="0,0,0,5" Padding="8,7"/>
                     <Button x:Name="OneDriveSourceButton" Content="OneDrive · 미연결" Tag="OneDrive" Click="CloudSource_Click" HorizontalContentAlignment="Left" Margin="0,0,0,5" Padding="8,7"/>
                     <Button x:Name="DropboxSourceButton" Content="Dropbox · 미연결" Tag="Dropbox" Click="CloudSource_Click" HorizontalContentAlignment="Left" Margin="0,0,0,5" Padding="8,7"/>
-                    <Button Content="PikPak · WebDAV" Tag="PikPak" Click="CloudSource_Click" HorizontalContentAlignment="Left" Padding="8,7" Margin="0,0,0,5"/>
+                    <Button x:Name="PikPakSourceButton" Content="PikPak · 설정 필요" Tag="PikPak" Click="CloudSource_Click" HorizontalContentAlignment="Left" Padding="8,7" Margin="0,0,0,5"/>
                     <TextBlock Text="내 저장소" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="4,18,0,8"/>
                     <StackPanel x:Name="StorageSourceButtons"/>
                     <Button Content="＋ 저장소 연결" Click="ManageStorage_Click" HorizontalContentAlignment="Left" Margin="0,6,0,0" Padding="8,7"/>

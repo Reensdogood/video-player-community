@@ -49,10 +49,10 @@ dotnet publish .\VideoPlayer.Wpf\VideoPlayer.Wpf.csproj -c Release -r win-x64 --
 ### Windows 설치 파일과 업데이트 패키지 생성
 
 ```powershell
-.\scripts\Build-WindowsInstaller.ps1 -Version 0.1.15
+.\scripts\Build-WindowsInstaller.ps1 -Version 0.1.16
 ```
 
-`artifacts/windows-installer/0.1.15`에 사용자별 설치용 `beondiueyow-ohmyplayer-win-Setup.exe`, `beondiueyow-ohmyplayer-win.msi`, 포터블 ZIP, 업데이트 패키지와 릴리스 피드가 생성됩니다. 이 패키지에는 CC 실행 엔진, 모델, FFmpeg가 함께 포함돼 설치 파일이 약 1GB에 이를 수 있습니다. 기존 설치본의 업데이트 연결을 유지하기 위해 내부 업데이트 식별자는 그대로 둡니다. 앱은 매 시작 때 업데이트를 확인하며 메인 화면에서 수동 확인도 할 수 있습니다. 실제 업데이트를 받게 하려면 생성된 파일을 GitHub 릴리스에 게시해야 합니다. 현재 설치 파일은 서명되지 않아 Windows 게시자 경고가 보일 수 있습니다.
+`artifacts/windows-installer/0.1.16`에 사용자별 설치용 `beondiueyow-ohmyplayer-win-Setup.exe`, `beondiueyow-ohmyplayer-win.msi`, 포터블 ZIP, 업데이트 패키지와 릴리스 피드가 생성됩니다. 이 패키지에는 CC 실행 엔진, 모델, FFmpeg가 함께 포함돼 설치 파일이 약 1GB에 이를 수 있습니다. 기존 설치본의 업데이트 연결을 유지하기 위해 내부 업데이트 식별자는 그대로 둡니다. 앱은 매 시작 때 업데이트를 확인하며 메인 화면에서 수동 확인도 할 수 있습니다. 실제 업데이트를 받게 하려면 생성된 파일을 GitHub 릴리스에 게시해야 합니다. 현재 설치 파일은 서명되지 않아 Windows 게시자 경고가 보일 수 있습니다.
 
 CPU용 CC 런타임을 새로 만들 때는 Python과 FFmpeg가 준비된 Windows 빌드 PC에서 `scripts\Build-CaptionRuntime.ps1`을 먼저 실행합니다. Whisper small 모델은 빌드 때 자동으로 내려받아 설치 파일에 포함됩니다.
 
@@ -96,3 +96,4 @@ MYBOX 연결은 MYBOX 웹의 **설정 → 계정 및 개인 액세스 토큰 관
 - [0.1.13 릴리스 노트](docs/RELEASE_NOTES_0.1.13.md)
 - [0.1.14 릴리스 노트](docs/RELEASE_NOTES_0.1.14.md)
 - [0.1.15 릴리스 노트](docs/RELEASE_NOTES_0.1.15.md)
+- [0.1.16 릴리스 노트](docs/RELEASE_NOTES_0.1.16.md)
